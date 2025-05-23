@@ -1,0 +1,9 @@
+services:
+  varnish:
+    image: varnish:fresh
+    platform: linux/amd64
+    container_name: varnish
+    hostname: varnish
+    volumes:
+      - ../../etc/varnish6.vcl:/magento/etc/varnish6.vcl
+      - .:/magento/tests/varnish

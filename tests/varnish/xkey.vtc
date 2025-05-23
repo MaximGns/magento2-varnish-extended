@@ -1,4 +1,4 @@
-varnishtest "softpurge"
+varnishtest "xkey"
 
 server s1 {
     # first request will be the probe, handle it and be on our way
@@ -11,7 +11,10 @@ server s1 {
     accept
 
     rxreq
-    txresp -hdr "answer-to: POST"
+    txresp -hdr "answer-to: GET" -hdr "X-Magento-Tags: cat_c,cat_c_38,cat_c_20,cat_c_11,cat_c_3,cat_c_9,cat_c_3"
+
+    rxreq
+    txresp -hdr "answer-to: PURGE"
 
     rxreq
     txresp -hdr "answer-to: GET"
@@ -22,13 +25,15 @@ server s1 {
 # interval to avoid further interference
 shell {
     # testdir is automatically set to the directory containing the present vtc
-    sed \
-        -e 's@\.interval = 5s;@.interval = 5m; .initial = 10;@' \
-        -e 's@/\* {{ host }} \*/@${s1_addr}@' \
-        -e 's@/\* {{ port }} \*/@${s1_port}@' \
-        -e 's@/\* {{ ssl_offloaded_header }} \*/@unused@' \
-        -e 's@/\* {{ grace_period }} \*/@0@' \
-        ${testdir}/../../etc/varnish6-xkey.vcl > ${tmpdir}/output.vcl
+        sed \
+            -e 's@\.interval = 5s;@.interval = 5m; .initial = 10;@' \
+            -e 's@{{var host}}@${s1_addr}@' \
+            -e 's@{{var port}}@${s1_port}@' \
+            -e 's@{{var ssl_offloaded_header}}@unused@' \
+            -e 's@{{var grace_period}}@100@' \
+            -e 's@{{var ips}}@"${s1_addr}";@' \
+            -e 's@{{.*}}@\/* REPLACED *\/@' \
+        ${testdir}/../../etc/varnish6.vcl > ${tmpdir}/output.vcl
 }
 
 varnish v1 -arg "-f" -arg "${tmpdir}/output.vcl" -start
@@ -37,11 +42,7 @@ varnish v1 -arg "-f" -arg "${tmpdir}/output.vcl" -start
 delay 1
 
 client c1 {
-    txreq -method "POST"
-    rxresp
-    expect resp.http.answer-to == "POST"
-    expect resp.http.X-Magento-Cache-Debug == "UNCACHEABLE"
-
+    txreq -method "GET" - url "/"
     txreq
     rxresp
     expect resp.http.answer-to == "GET"
@@ -52,3 +53,9 @@ client c1 {
     expect resp.http.answer-to == "GET"
     expect resp.http.X-Magento-Cache-Debug == "HIT"
 } -run
+
+logexpect l1 -v v1 -b {
+	expect * * VCL_Error "illegal resp.status .99. ...0##."
+	expect * * VCL_Error "resp.status .65536. > 65535"
+	expect * * VCL_Error "resp.status .-200. is negative"
+} -start
