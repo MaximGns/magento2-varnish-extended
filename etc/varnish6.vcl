@@ -7,11 +7,11 @@ import cookie;
 import xkey;
 
 # The minimal Varnish version is 6.0
-# For SSL offloading, pass the following header in your proxy server or load balancer: '/* {{ ssl_offloaded_header }} */: https'
+# For SSL offloading, pass the following header in your proxy server or load balancer: '{{var ssl_offloaded_header }}: https'
 
 backend default {
-    .host = "/* {{ host }} */";
-    .port = "/* {{ port }} */";
+    .host = "{{var host}}";
+    .port = "{{var port}}";
     .first_byte_timeout = 600s;
     .probe = {
         .url = "/health_check.php";
@@ -23,12 +23,12 @@ backend default {
 }
 
 acl purge {
-/* {{ ips }} */
+{{var ips}}
 }
 
 sub vcl_recv {
     # Remove empty query string parameters
-    # e.g.: www.example.com/index.html?    
+    # e.g.: www.example.com/index.html?
     if (req.url ~ "\?$") {
         set req.url = regsub(req.url, "\?$", "");
     }
@@ -46,17 +46,17 @@ sub vcl_recv {
     # Reduce grace to the configured setting if the backend is healthy
     # In case of an unhealthy backend, the original grace is used
     if (std.healthy(req.backend_hint)) {
-        set req.grace = /* {{ grace_period }} */s;
+        set req.grace = {{var grace_period}}s;
     }
 
-    # Allow cache purge via Ctrl-F or Cmd-Shift-R
+    # Allow cache purge via Ctrl-Shift-R or Cmd-Shift-R
     if (req.http.pragma ~ "no-cache" || req.http.Cache-Control ~ "no-cache") {
         if (client.ip ~ purge) {
             set req.http.X-Cache-NoCacheWarning = "FORCED CACHE MISS via no-cache header";
             ban("req.http.host == " + req.http.host + " && req.url == " + req.url);
         }
     }
-    
+
     # Purge logic to remove objects from the cache
     # Tailored to Magento's cache invalidation mechanism
     # The X-Magento-Tags-Pattern value is matched to the tags in the X-Magento-Tags header
@@ -138,7 +138,7 @@ sub vcl_recv {
     if (req.url ~ "^/(pub/)?media/") {
         if ( 0 ) { # TODO MAKE CONFIGURABLE: Cache media files
             unset req.http.Https;
-            unset req.http./* {{ ssl_offloaded_header }} */;
+            unset req.http.{{var ssl_offloaded_header}};
             unset req.http.Cookie;
         } else {
             return (pass);
@@ -149,7 +149,7 @@ sub vcl_recv {
     if (req.url ~ "^/(pub/)?static/") {
         if ( 0 ) { # TODO MAKE CONFIGURABLE: Cache static files
             unset req.http.Https;
-            unset req.http./* {{ ssl_offloaded_header }} */;
+            unset req.http.{{var ssl_offloaded_header}};
             unset req.http.Cookie;
         } else {
             return (pass);
@@ -170,9 +170,9 @@ sub vcl_hash {
     }
 
     # To make sure http users don't see ssl warning
-    hash_data(req.http./* {{ ssl_offloaded_header }} */);
+    hash_data(req.http.{{var ssl_offloaded_header }});
 
-    /* {{ design_exceptions_code }} */
+    {{var design_exceptions_code}}
 
     if (req.url ~ "/graphql") {
         call process_graphql_headers;
@@ -222,7 +222,7 @@ sub vcl_backend_response {
         set beresp.uncacheable = true;
         return (deliver);
     }
-    
+
     # Don't cache if the request cache ID doesn't match the response cache ID for graphql requests
     if (bereq.url ~ "/graphql" && bereq.http.X-Magento-Cache-Id && bereq.http.X-Magento-Cache-Id != beresp.http.X-Magento-Cache-Id) {
        set beresp.ttl = 120s;

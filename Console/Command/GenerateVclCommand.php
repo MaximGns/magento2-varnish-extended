@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Elgentos\VarnishExtended\Console\Command;
 
+use Elgentos\VarnishExtended\Model\Config as VarnishExtendedConfig;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Console\Cli;
 use Magento\Framework\Filesystem\DriverPool;
@@ -24,7 +25,9 @@ class GenerateVclCommand extends MagentoGenerateVclCommand
         private readonly VclGeneratorInterfaceFactory $vclGeneratorFactory,
         private readonly WriteFactory $writeFactory,
         private readonly ScopeConfigInterface $scopeConfig,
-        private readonly Json $serializer
+        private readonly Json $serializer,
+        private readonly Config $pageCacheConfig,
+        private readonly VarnishExtendedConfig $varnishExtendedConfig,
     ) {
         parent::__construct($vclGeneratorFactory, $writeFactory, $scopeConfig, $serializer);
     }
@@ -137,9 +140,8 @@ class GenerateVclCommand extends MagentoGenerateVclCommand
             $outputFile = $input->getOption(self::OUTPUT_FILE_OPTION);
             $varnishVersion = $input->getOption(self::EXPORT_VERSION_OPTION);
             $vclParameters = array_merge($this->getVclParameters($input), [
-                'sslOffloadedHeader' => $this->getSslOffloadedHeader(),
-                'designExceptions' => $this->getDesignExceptions(),
-                'enableBfcache' => $input->getOption(self::ENABLE_BFCACHE_OPTION),
+                'sslOffloadedHeader' => $this->varnishExtendedConfig->getSslOffloadedHeader(),
+                'designExceptions' => $this->varnishExtendedConfig->getDesignExceptions(),
             ]);
             $vclGenerator = $this->vclGeneratorFactory->create($vclParameters);
             $vcl = $vclGenerator->generateVcl($varnishVersion, $inputFile);
@@ -173,10 +175,17 @@ class GenerateVclCommand extends MagentoGenerateVclCommand
     {
         $parameters = [];
 
-        $parameters['accessList'] = $input->getOption(self::ACCESS_LIST_OPTION);
-        $parameters['backendHost'] = $input->getOption(self::BACKEND_HOST_OPTION);
-        $parameters['backendPort'] = $input->getOption(self::BACKEND_PORT_OPTION);
-        $parameters['gracePeriod'] = $input->getOption(self::GRACE_PERIOD_OPTION);
+        $enableBfcacheOptionPassed = (bool) $input->getParameterOption('--' . self::ENABLE_BFCACHE_OPTION, false, true);
+        $accessListOptionPassed = (bool) $input->getParameterOption('--' . self::ACCESS_LIST_OPTION, false, true);
+        $backendHostOptionPassed = (bool) $input->getParameterOption('--' . self::BACKEND_HOST_OPTION, false, true);
+        $backendPortOptionPassed = (bool) $input->getParameterOption('--' . self::BACKEND_PORT_OPTION, false, true);
+        $gracePeriodOptionPassed = (bool) $input->getParameterOption('--' . self::GRACE_PERIOD_OPTION, false, true);
+
+        $parameters['enableBfcache'] = $enableBfcacheOptionPassed ?: $this->varnishExtendedConfig->getEnableBfcache();
+        $parameters['accessList'] = ($accessListOptionPassed ? $input->getOption(self::ACCESS_LIST_OPTION) : $this->varnishExtendedConfig->getAccessList());
+        $parameters['backendHost'] = ($backendHostOptionPassed ? $input->getOption(self::BACKEND_HOST_OPTION) : $this->varnishExtendedConfig->getBackendHost());
+        $parameters['backendPort'] = ($backendPortOptionPassed ? $input->getOption(self::BACKEND_PORT_OPTION) : $this->varnishExtendedConfig->getBackendPort());
+        $parameters['gracePeriod'] = ($gracePeriodOptionPassed ? $input->getOption(self::GRACE_PERIOD_OPTION) : $this->varnishExtendedConfig->getGracePeriod());
 
         return $parameters;
     }
@@ -222,30 +231,5 @@ class GenerateVclCommand extends MagentoGenerateVclCommand
         }
 
         return $errors;
-    }
-
-    /**
-     * Get ssl Offloaded header
-     *
-     * @return mixed
-     */
-    protected function getSslOffloadedHeader()
-    {
-        return $this->scopeConfig->getValue(Request::XML_PATH_OFFLOADER_HEADER);
-    }
-
-    /**
-     * Get design exceptions
-     *
-     * @return array
-     */
-    protected function getDesignExceptions()
-    {
-        $expressions = $this->scopeConfig->getValue(
-            Config::XML_VARNISH_PAGECACHE_DESIGN_THEME_REGEX,
-            ScopeInterface::SCOPE_STORE
-        );
-
-        return $expressions ? $this->serializer->unserialize($expressions) : [];
     }
 }
