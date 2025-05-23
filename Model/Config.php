@@ -19,6 +19,10 @@ class Config extends PageCacheConfig
 
     public const XML_PATH_VARNISH_ENABLE_BFCACHE = 'system/full_page_cache/varnish/enable_bfcache';
 
+    public const XML_PATH_VARNISH_ENABLE_MEDIA_CACHE = 'system/full_page_cache/varnish/enable_media_cache';
+
+    public const XML_PATH_VARNISH_ENABLE_STATIC_CACHE = 'system/full_page_cache/varnish/enable_static_cache';
+
     public const XML_PATH_VARNISH_TRACKING_PARAMETERS = 'system/full_page_cache/varnish/tracking_parameters';
 
     public const XML_PATH_VARNISH_USE_XKEY_VMOD = 'system/full_page_cache/varnish/use_xkey_vmod';
@@ -106,5 +110,21 @@ class Config extends PageCacheConfig
         );
 
         return $expressions ? $this->serializer->unserialize($expressions) : [];
+    }
+
+    /**
+     * @return bool
+     */
+    public function getEnableMediaCache()
+    {
+        return (boolean) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_MEDIA_CACHE);
+    }
+
+    /**
+     * @return bool
+     */
+    public function getEnableStaticCache()
+    {
+        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_STATIC_CACHE);
     }
 }

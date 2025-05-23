@@ -78,13 +78,21 @@ sub vcl_recv {
         {{if use_xkey_vmod}}
         # Full Page Cache flush
         if (req.http.X-Magento-Tags-Pattern == ".*") {
-            {{if use_soft_purging}}set req.http.n-gone = xkey.softpurge("all");{{else}}set req.http.n-gone = xkey.purge("all");{{/if}}
+            if (req.http.X-Magento-Purge-Soft) {
+                set req.http.n-gone = xkey.softpurge("all");
+            } else {
+                set req.http.n-gone = xkey.purge("all");
+            }
             return (synth(200, "Invalidated " + req.http.n-gone + " objects - full flush"));
         } elseif (req.http.X-Magento-Tags-Pattern) {
             # replace "((^|,)cat_c(,|$))|((^|,)cat_p(,|$))" to be "cat_c,cat_p"
             set req.http.X-Magento-Tags-Pattern = regsuball(req.http.X-Magento-Tags-Pattern, "[^a-zA-Z0-9_-]+" ,",");
             set req.http.X-Magento-Tags-Pattern = regsuball(req.http.X-Magento-Tags-Pattern, "(^,*)|(,*$)" ,"");
-            {{if use_soft_purging}}set req.http.n-gone = xkey.softpurge(req.http.X-Magento-Tags-Pattern);{{else}}set req.http.n-gone = xkey.purge(req.http.X-Magento-Tags-Pattern);{{/if}}
+            if (req.http.X-Magento-Purge-Soft) {
+                set req.http.n-gone = xkey.softpurge(req.http.X-Magento-Tags-Pattern);
+            } else {
+                set req.http.n-gone = xkey.purge(req.http.X-Magento-Tags-Pattern);
+            }
             return (synth(200, "Invalidated " + req.http.n-gone + " objects"));
         }
         {{/if}}
@@ -133,7 +141,7 @@ sub vcl_recv {
 
     # Media files caching
     if (req.url ~ "^/(pub/)?media/") {
-        if ( 0 ) { # TODO MAKE CONFIGURABLE: Cache media files
+        if ( {{var enable_media_cache}} ) {
             unset req.http.Https;
             unset req.http.{{var ssl_offloaded_header}};
             unset req.http.Cookie;
@@ -144,7 +152,7 @@ sub vcl_recv {
 
     # Static files caching
     if (req.url ~ "^/(pub/)?static/") {
-        if ( 0 ) { # TODO MAKE CONFIGURABLE: Cache static files
+        if ( {{var enable_static_cache}} ) {
             unset req.http.Https;
             unset req.http.{{var ssl_offloaded_header}};
             unset req.http.Cookie;
