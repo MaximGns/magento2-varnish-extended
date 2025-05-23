@@ -65,7 +65,7 @@ sub vcl_recv {
 
         # Full Page Cache flush
         if (req.http.X-Magento-Tags-Pattern == ".*") {
-            if (0) { # CONFIGURABLE: soft purge
+            if (req.http.X-Magento-Purge-Soft) {
                 set req.http.n-gone = xkey.softpurge("all");
             } else {
                 set req.http.n-gone = xkey.purge("all");
@@ -75,7 +75,7 @@ sub vcl_recv {
             # replace "((^|,)cat_c(,|$))|((^|,)cat_p(,|$))" to be "cat_c,cat_p"
             set req.http.X-Magento-Tags-Pattern = regsuball(req.http.X-Magento-Tags-Pattern, "[^a-zA-Z0-9_-]+" ,",");
             set req.http.X-Magento-Tags-Pattern = regsuball(req.http.X-Magento-Tags-Pattern, "(^,*)|(,*$)" ,"");
-            if ( 1 ) { # CONFIGURABLE: Use softpurge
+            if (req.http.X-Magento-Purge-Soft) {
                 set req.http.n-gone = xkey.softpurge(req.http.X-Magento-Tags-Pattern);
             } else {
                 set req.http.n-gone = xkey.purge(req.http.X-Magento-Tags-Pattern);
