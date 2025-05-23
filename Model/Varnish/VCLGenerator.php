@@ -17,7 +17,7 @@ class VCLGenerator extends \Magento\PageCache\Model\Varnish\VclGenerator
         private readonly array $accessList,
         private readonly string $gracePeriod,
         private readonly string $sslOffloadedHeader,
-        private readonly string $trackingParameters,
+        private readonly string $trackingParameters = '',
         private readonly array $designExceptions = [],
     ) {
         parent::__construct(
