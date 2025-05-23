@@ -4,13 +4,38 @@ declare(strict_types=1);
 
 namespace Elgentos\VarnishExtended\Console\Command;
 
+use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Framework\Console\Cli;
+use Magento\Framework\Filesystem\DriverPool;
+use Magento\Framework\Filesystem\File\WriteFactory;
+use Magento\Framework\HTTP\PhpEnvironment\Request;
+use Magento\Framework\Serialize\Serializer\Json;
 use Magento\PageCache\Console\Command\GenerateVclCommand as MagentoGenerateVclCommand;
+use Magento\PageCache\Model\Config;
+use Magento\PageCache\Model\VclGeneratorInterfaceFactory;
+use Magento\Store\Model\ScopeInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class GenerateVclCommand extends MagentoGenerateVclCommand
 {
+    public function __construct(
+        private readonly VclGeneratorInterfaceFactory $vclGeneratorFactory,
+        private readonly WriteFactory $writeFactory,
+        private readonly ScopeConfigInterface $scopeConfig,
+        private readonly Json $serializer
+    ) {
+        parent::__construct($vclGeneratorFactory, $writeFactory, $scopeConfig, $serializer);
+    }
+
+    protected $inputToVclMap = [
+        self::ACCESS_LIST_OPTION => 'accessList',
+        self::BACKEND_PORT_OPTION => 'backendPort',
+        self::BACKEND_HOST_OPTION => 'backendHost',
+        self::GRACE_PERIOD_OPTION => 'gracePeriod',
+    ];
+
     /**
      * Enable BFCache option name
      */
@@ -154,5 +179,73 @@ class GenerateVclCommand extends MagentoGenerateVclCommand
         $parameters['gracePeriod'] = $input->getOption(self::GRACE_PERIOD_OPTION);
 
         return $parameters;
+    }
+
+    /**
+     * Maps input keys to vcl parameters
+     *
+     * @param InputInterface $input
+     * @return array
+     */
+    protected function inputToVclParameters(InputInterface $input)
+    {
+        $parameters = [];
+
+        foreach ($this->inputToVclMap as $inputKey => $vclKey) {
+            $parameters[$vclKey] = $input->getOption($inputKey);
+        }
+
+        return $parameters;
+    }
+
+    /**
+     * Input validation
+     *
+     * @param InputInterface $input
+     * @return array
+     */
+    protected function validate(InputInterface $input)
+    {
+        $errors = [];
+
+        if ($input->hasOption(self::BACKEND_PORT_OPTION)
+            && ($input->getOption(self::BACKEND_PORT_OPTION) < 0
+                || $input->getOption(self::BACKEND_PORT_OPTION) > 65535)
+        ) {
+            $errors[] = 'Invalid backend port value';
+        }
+
+        if ($input->hasOption(self::GRACE_PERIOD_OPTION)
+            && $input->getOption(self::GRACE_PERIOD_OPTION) < 0
+        ) {
+            $errors[] = 'Grace period can\'t be lower than 0';
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Get ssl Offloaded header
+     *
+     * @return mixed
+     */
+    protected function getSslOffloadedHeader()
+    {
+        return $this->scopeConfig->getValue(Request::XML_PATH_OFFLOADER_HEADER);
+    }
+
+    /**
+     * Get design exceptions
+     *
+     * @return array
+     */
+    protected function getDesignExceptions()
+    {
+        $expressions = $this->scopeConfig->getValue(
+            Config::XML_VARNISH_PAGECACHE_DESIGN_THEME_REGEX,
+            ScopeInterface::SCOPE_STORE
+        );
+
+        return $expressions ? $this->serializer->unserialize($expressions) : [];
     }
 }
