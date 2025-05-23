@@ -128,7 +128,7 @@ sub vcl_recv {
 
     # Media files caching
     if (req.url ~ "^/(pub/)?media/") {
-        if ( 0 ) { # TODO MAKE CONFIGURABLE: Cache media files
+        if ( {{var enable_media_cache}} ) {
             unset req.http.Https;
             unset req.http.{{var ssl_offloaded_header}};
             unset req.http.Cookie;

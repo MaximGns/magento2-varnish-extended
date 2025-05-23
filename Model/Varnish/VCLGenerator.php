@@ -47,6 +47,7 @@ class VCLGenerator extends \Magento\PageCache\Model\Varnish\VclGenerator
             'grace_period' => $this->gracePeriod,
             'ssl_offloaded_header' => $this->sslOffloadedHeader,
             'design_exceptions_code' => $this->getRegexForDesignExceptions(),
+            'enable_media_cache' => $this->config->getEnableMediaCache(),
             'enable_static_cache' => $this->config->getEnableStaticCache()
         ];
     }

@@ -92,6 +92,14 @@ class Config extends PageCacheConfig
     /**
      * @return bool
      */
+    public function getEnableMediaCache(): bool
+    {
+        return (boolean) $this->scopeConfig->getValue(SELF::XML_PATH_VARNISH_ENABLE_MEDIA_CACHE);
+    }
+
+    /**
+     * @return bool
+     */
     public function getEnableStaticCache(): bool
     {
         return (boolean) $this->scopeConfig->getValue(SELF::XML_PATH_VARNISH_ENABLE_STATIC_CACHE);

@@ -30,6 +30,15 @@
                         </depends>
                     </field>
 
+                    <field id="enable_media_cache" translate="label" type="select" sortOrder="33" showInDefault="1">
+                        <label>Enable caching of media files</label>
+                        <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                        <default>0</default>
+                        <depends>
+                            <field id="caching_application">1</field>
+                        </depends>
+                    </field>
+
                     <field id="enable_static_cache" translate="label" type="select" sortOrder="32" showInDefault="1">
                         <label>Enable caching of static files</label>
                         <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
