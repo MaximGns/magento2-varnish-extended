@@ -17,7 +17,8 @@ class VCLGenerator extends \Magento\PageCache\Model\Varnish\VclGenerator
         private readonly array $accessList,
         private readonly string $gracePeriod,
         private readonly string $sslOffloadedHeader,
-        private readonly array $designExceptions = []
+        private readonly string $trackingParameters,
+        private readonly array $designExceptions = [],
     ) {
         parent::__construct(
             $vclTemplateLocator,
@@ -44,7 +45,8 @@ class VCLGenerator extends \Magento\PageCache\Model\Varnish\VclGenerator
             'access_list' => $this->getTransformedAccessList(),
             'grace_period' => $this->gracePeriod,
             'ssl_offloaded_header' => $this->sslOffloadedHeader,
-            'design_exceptions_code' => $this->getRegexForDesignExceptions()
+            'tracking_parameters' => $this->trackingParameters,
+            'design_exceptions_code' => $this->getRegexForDesignExceptions(),
         ];
     }
 
