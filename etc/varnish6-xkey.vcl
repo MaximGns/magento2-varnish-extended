@@ -48,6 +48,14 @@ sub vcl_recv {
     if (std.healthy(req.backend_hint)) {
         set req.grace = /* {{ grace_period }} */s;
     }
+
+    # Allow cache purge via Ctrl-F or Cmd-Shift-R
+    if (req.http.pragma ~ "no-cache" || req.http.Cache-Control ~ "no-cache") {
+        if (client.ip ~ purge) {
+            set req.http.X-Cache-NoCacheWarning = "FORCED CACHE MISS via no-cache header";
+            ban("req.http.host == " + req.http.host + " && req.url == " + req.url);
+        }
+    }
     
     # Purge logic to remove objects from the cache
     # Tailored to Magento's cache invalidation mechanism
