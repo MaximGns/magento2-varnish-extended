@@ -159,24 +159,18 @@ sub vcl_recv {
 
     # Media files caching
     if (req.url ~ "^/(pub/)?media/") {
-        if ( {{var enable_media_cache}} ) {
-            unset req.http.Https;
+            {{if enable_media_cache}}unset req.http.Https;
             unset req.http.{{var ssl_offloaded_header}};
             unset req.http.Cookie;
-        } else {
-            return (pass);
-        }
+        {{else}}return (pass);{{/if}}
     }
 
     # Static files caching
     if (req.url ~ "^/(pub/)?static/") {
-        if ( {{var enable_static_cache}} ) {
-            unset req.http.Https;
+            {{if enable_static_cache}}unset req.http.Https;
             unset req.http.{{var ssl_offloaded_header}};
             unset req.http.Cookie;
-        } else {
-            return (pass);
-        }
+        {{else}}return (pass);{{/if}}
     }
 
     # Don't cache the authenticated GraphQL requests
@@ -288,10 +282,8 @@ sub vcl_deliver {
 
     # Let browser and Cloudflare cache non-static content that are cacheable for short period of time
     if (resp.http.Cache-Control !~ "private" && req.url !~ "^/(media|static)/" && obj.ttl > 0s) {
-        set resp.http.Cache-Control = "must-revalidate, max-age=60";
-        if ( 0 ) { # TODO MAKE CONFIGURABLE: Enable/disable backward-forward cache (default enabled)
-            set resp.http.Cache-Control = resp.http.Cache-Control + ", no-store";
-        }
+        {{if enable_bfcache}}set resp.http.Cache-Control = "must-revalidate, max-age=60";{{/if}}
+        {{if disable_bfcache}}set resp.http.Cache-Control = "no-store, must-revalidate, max-age=60";{{/if}}
     }
 
     # Remove all headers that don't provide any value for the client
