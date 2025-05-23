@@ -19,7 +19,6 @@ class PurgeCache extends \Magento\CacheInvalidate\Model\PurgeCache
     public const HEADER_X_MAGENTO_TAGS_PATTERN = 'X-Magento-Tags-Pattern';
     public const HEADER_X_MAGENTO_PURGE_SOFT = 'X-Magento-Purge-Soft';
 
-
     /**
      * @var Server
      */
