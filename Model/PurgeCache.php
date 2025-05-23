@@ -164,6 +164,7 @@ class PurgeCache extends \Magento\CacheInvalidate\Model\PurgeCache
                 $read = $socketAdapter->read();
 
                 $this->eventManager->dispatch('varnish_cache_purge_invalidate_result', [
+                    'tags' => $formattedTagsChunk,
                     'result' => $read,
                     'connected_to' => [$server->getHost(), $server->getPort()],
                 ]);
