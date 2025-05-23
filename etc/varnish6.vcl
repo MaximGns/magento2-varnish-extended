@@ -171,7 +171,7 @@ sub vcl_hash {
     }
 
     # To make sure http users don't see ssl warning
-    hash_data(req.http.{{var ssl_offloaded_header }});
+    hash_data(req.http.{{var ssl_offloaded_header}});
 
     {{var design_exceptions_code}}
 
