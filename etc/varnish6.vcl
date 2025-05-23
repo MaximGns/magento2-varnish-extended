@@ -53,8 +53,7 @@ sub vcl_recv {
     # Allow cache purge via Ctrl-Shift-R or Cmd-Shift-R for IP's in purge ACL list
     if (req.http.pragma ~ "no-cache" || req.http.Cache-Control ~ "no-cache") {
         if (client.ip ~ purge) {
-            set req.http.X-Cache-NoCacheWarning = "FORCED CACHE MISS via no-cache header";
-            ban("req.http.host == " + req.http.host + " && req.url == " + req.url);
+            set req.hash_always_miss = true;
         }
     }
 
@@ -245,6 +244,8 @@ sub vcl_deliver {
         set resp.http.X-Magento-Cache-Debug = "HIT";
     } else if (obj.hits > 0 && obj.ttl <= 0s) {
         set resp.http.X-Magento-Cache-Debug = "HIT-GRACE";
+    } else if(req.hash_always_miss) {
+        set resp.http.X-Magento-Cache-Debug = "MISS-FORCED";
     } else {
         set resp.http.X-Magento-Cache-Debug = "MISS";
     }
