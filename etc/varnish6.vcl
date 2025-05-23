@@ -23,7 +23,8 @@ backend default {
 }
 
 acl purge {
-{{var ips}}
+{{for item in access_list}}    "{{var item.ip}}";
+{{/for}}
 }
 
 sub vcl_recv {
