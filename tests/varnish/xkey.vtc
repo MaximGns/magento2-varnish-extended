@@ -11,13 +11,29 @@ server s1 {
     accept
 
     rxreq
-    txresp -hdr "answer-to: GET" -hdr "X-Magento-Tags: cat_c,cat_c_38,cat_c_20,cat_c_11,cat_c_3,cat_c_9,cat_c_3"
+    expect req.url == "/"
+    expect req.method == "GET"
+    txresp -hdr "X-Magento-Tags: cat_c,cat_c_38,cat_p_694,cat_c_20"
 
     rxreq
-    txresp -hdr "answer-to: PURGE"
+    expect req.url == "/hero-hoodie.html"
+    expect req.method == "GET"
+    txresp -hdr "X-Magento-Tags: cat_c,cat_c_37,cat_p_694,cat_c_21"
 
     rxreq
-    txresp -hdr "answer-to: GET"
+    expect req.url == "/breathe-easy-tank.html"
+    expect req.method == "GET"
+    txresp -hdr "X-Magento-Tags: cat_c,cat_c_37,cat_p_695,cat_c_21"
+
+    rxreq
+    expect req.url == "/"
+    expect req.method == "GET"
+    txresp -hdr "X-Magento-Tags: cat_c,cat_c_38,cat_p_694,cat_c_20"
+
+    rxreq
+    expect req.url == "/hero-hoodie.html"
+    expect req.method == "GET"
+    txresp -hdr "X-Magento-Tags: cat_c,cat_c_37,cat_p_694,cat_c_21"
 } -start
 
 # generate usable VCL pointing towards s1
@@ -25,37 +41,64 @@ server s1 {
 # interval to avoid further interference
 shell {
     # testdir is automatically set to the directory containing the present vtc
-        sed \
-            -e 's@\.interval = 5s;@.interval = 5m; .initial = 10;@' \
-            -e 's@{{var host}}@${s1_addr}@' \
-            -e 's@{{var port}}@${s1_port}@' \
-            -e 's@{{var ssl_offloaded_header}}@unused@' \
-            -e 's@{{var grace_period}}@100@' \
-            -e 's@{{var ips}}@"${s1_addr}";@' \
-            -e 's@{{.*}}@\/* REPLACED *\/@' \
+    sed \
+        -e 's@\.interval = 5s;@.interval = 5m; .initial = 10;@' \
+        -e 's@{{var host}}@${s1_addr}@' \
+        -e 's@{{var port}}@${s1_port}@' \
+        -e 's@{{var ssl_offloaded_header}}@unused@' \
+        -e 's@{{var grace_period}}@100@' \
+        -e 's@{{for item in access_list}}    "{{var item.ip}}";@"${s1_addr}";@' \
+        -e 's@{{/for}}@@' \
+        -e 's@{{.*}}@\/* REPLACED *\/@' \
         ${testdir}/../../etc/varnish6.vcl > ${tmpdir}/output.vcl
 }
 
-varnish v1 -arg "-f" -arg "${tmpdir}/output.vcl" -start
+varnish v1 -arg "-f" -arg "${tmpdir}/output.vcl" -arg "-p" -arg "vsl_mask=+Hash" -start
 
-# make surethe probe request fired
+# make sure the probe request fired
 delay 1
 
 client c1 {
-    txreq -method "GET" - url "/"
-    txreq
+    txreq -method "GET" -url "/"
     rxresp
-    expect resp.http.answer-to == "GET"
     expect resp.http.X-Magento-Cache-Debug == "MISS"
 
-    txreq
+    txreq -method "GET" -url "/hero-hoodie.html"
     rxresp
-    expect resp.http.answer-to == "GET"
+    expect resp.http.X-Magento-Cache-Debug == "MISS"
+
+    txreq -method "GET" -url "/breathe-easy-tank.html"
+    rxresp
+    expect resp.http.X-Magento-Cache-Debug == "MISS"
+
+    txreq -method "GET" -url "/"
+    rxresp
+    expect resp.http.X-Magento-Cache-Debug == "HIT"
+
+    txreq -method "GET" -url "/hero-hoodie.html"
+    rxresp
+    expect resp.http.X-Magento-Cache-Debug == "HIT"
+
+    txreq -method "GET" -url "/breathe-easy-tank.html"
+    rxresp
+    expect resp.http.X-Magento-Cache-Debug == "HIT"
+
+    txreq -method "PURGE" -url "/" -hdr "X-Magento-Tags-Pattern: ((^|,)cat_p_694(,|$))" -hdr "X-Magento-Purge-Soft: 1"
+    rxresp
+    expect resp.status == 200
+    expect resp.http.Content-Type == "application/json"
+    expect resp.body == "{ \"invalidated\": 2 }"
+    expect resp.reason == "OK"
+
+    txreq -method "GET" -url "/"
+    rxresp
+    expect resp.http.X-Magento-Cache-Debug == "HIT-GRACE"
+
+    txreq -method "GET" -url "/hero-hoodie.html"
+    rxresp
+    expect resp.http.X-Magento-Cache-Debug == "HIT-GRACE"
+
+    txreq -method "GET" -url "/breathe-easy-tank.html"
+    rxresp
     expect resp.http.X-Magento-Cache-Debug == "HIT"
 } -run
-
-logexpect l1 -v v1 -b {
-	expect * * VCL_Error "illegal resp.status .99. ...0##."
-	expect * * VCL_Error "resp.status .65536. > 65535"
-	expect * * VCL_Error "resp.status .-200. is negative"
-} -start

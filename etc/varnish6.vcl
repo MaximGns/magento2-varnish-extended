@@ -88,7 +88,7 @@ sub vcl_recv {
             } else {
                 set req.http.n-gone = xkey.purge(req.http.X-Magento-Tags-Pattern);
             }
-            return (synth(200, "Invalidated " + req.http.n-gone + " objects"));
+            return (synth(200, req.http.n-gone));
         }
 
         return (synth(200, "Purged"));
@@ -267,4 +267,17 @@ sub vcl_deliver {
     unset resp.http.X-Varnish;
     unset resp.http.Via;
     unset resp.http.Link;
+}
+
+sub vcl_synth {
+    if(req.method == "PURGE")  {
+        set resp.http.Content-Type = "application/json";
+        if(req.http.X-Magento-Tags-Pattern) {
+            set resp.body = {"{ "invalidated": "} + resp.reason + {" }"};
+        } else {
+            set resp.body = {"{ "invalidated": 1 }"};
+        }
+        set resp.reason = "OK";
+        return(deliver);
+    }
 }
