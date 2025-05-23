@@ -88,7 +88,7 @@ sub vcl_recv {
             } else {
                 set req.http.n-gone = xkey.purge("all");
             }
-            return (synth(200, "Invalidated " + req.http.n-gone + " objects - full flush"));
+            return (synth(200, req.http.n-gone));
         } elseif (req.http.X-Magento-Tags-Pattern) {
             # replace "((^|,)cat_c(,|$))|((^|,)cat_p(,|$))" to be "cat_c,cat_p"
             set req.http.X-Magento-Tags-Pattern = regsuball(req.http.X-Magento-Tags-Pattern, "[^a-zA-Z0-9_-]+" ,",");
@@ -98,11 +98,20 @@ sub vcl_recv {
             } else {
                 set req.http.n-gone = xkey.purge(req.http.X-Magento-Tags-Pattern);
             }
-            return (synth(200, "Invalidated " + req.http.n-gone + " objects"));
+            return (synth(200, req.http.n-gone));
+        }
+        {{else}}
+        if (req.method == "PURGE") {
+            if (client.ip !~ purge) {
+                return (synth(405, "Method not allowed"));
+            }
+            if (!req.http.X-Magento-Tags-Pattern) {
+                return (purge);
+            }
+            ban("obj.http.X-Magento-Tags ~ " + req.http.X-Magento-Tags-Pattern);
+            return (synth(200, "0"));
         }
         {{/if}}
-
-        return (synth(200, "Purged"));
     }
 
     if (req.method != "GET" &&
