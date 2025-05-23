@@ -4,7 +4,9 @@ vcl 4.1;
 
 import cookie;
 import std;
-{{if use_xkey_vmod}}import xkey;{{/if}}
+{{if use_xkey_vmod}}
+import xkey;
+{{/if}}
 
 # The minimal Varnish version is 6.0
 # For SSL offloading, pass the following header in your proxy server or load balancer: '{{var ssl_offloaded_header }}: https'
@@ -24,15 +26,12 @@ backend default {
 
 # Access control list for purge requests
 acl purge {
-{{for item in access_list}}    "{{var item.ip}}";
+{{for item in access_list}}
+    "{{var item.ip}}";
 {{/for}}
 }
 
 sub vcl_recv {
-    {{for item in pass_on_cookie_presence}}if (req.http.Cookie ~ "{{var item.regex}}") {
-        return (pass);
-    }
-    {{/for}}
     # Remove empty query string parameters
     # e.g.: www.example.com/index.html?
     if (req.url ~ "\?$") {
@@ -77,7 +76,7 @@ sub vcl_recv {
             return (purge);
         }
 
-        {{if use_xkey_vmod}}
+{{if use_xkey_vmod}}
         # Full Page Cache flush
         if (req.http.X-Magento-Tags-Pattern == ".*") {
             # If Magento wants to flush everything with .* regexp, it's faster to remove them
@@ -100,7 +99,7 @@ sub vcl_recv {
             }
             return (synth(200, req.http.n-gone));
         }
-        {{else}}
+{{else}}
         if (req.method == "PURGE") {
             if (client.ip !~ purge) {
                 return (synth(405, "Method not allowed"));
@@ -111,7 +110,7 @@ sub vcl_recv {
             ban("obj.http.X-Magento-Tags ~ " + req.http.X-Magento-Tags-Pattern);
             return (synth(200, "0"));
         }
-        {{/if}}
+{{/if}}
     }
 
     if (req.method != "GET" &&
@@ -151,6 +150,12 @@ sub vcl_recv {
         return (pass);
     }
 
+{{for item in pass_on_cookie_presence}}
+    if (req.http.Cookie ~ "{{var item.regex}}") {
+        return (pass);
+    }
+{{/for}}
+
     # Remove all marketing/tracking get parameters to minimize the cache objects
     if (req.url ~ "(\?|&)({{var tracking_parameters}})=") {
         set req.url = regsuball(req.url, "({{var tracking_parameters}})=[-_A-z0-9+(){}%.]+&?", "");
@@ -159,18 +164,24 @@ sub vcl_recv {
 
     # Media files caching
     if (req.url ~ "^/(pub/)?media/") {
-            {{if enable_media_cache}}unset req.http.Https;
+{{if enable_media_cache}}
+            unset req.http.Https;
             unset req.http.{{var ssl_offloaded_header}};
             unset req.http.Cookie;
-        {{else}}return (pass);{{/if}}
+{{else}}
+            return (pass);
+{{/if}}
     }
 
     # Static files caching
     if (req.url ~ "^/(pub/)?static/") {
-            {{if enable_static_cache}}unset req.http.Https;
+{{if enable_static_cache}}
+            unset req.http.Https;
             unset req.http.{{var ssl_offloaded_header}};
             unset req.http.Cookie;
-        {{else}}return (pass);{{/if}}
+{{else}}
+            return (pass);
+{{/if}}
     }
 
     # Don't cache the authenticated GraphQL requests
@@ -229,13 +240,13 @@ sub vcl_backend_response {
     version is fetched in the background.
     set beresp.grace = 1d;
 
-    {{if use_xkey_vmod}}
+{{if use_xkey_vmod}}
     if (beresp.http.X-Magento-Tags) {
         # set comma separated xkey with "all" tag, allowing for fast full purges
         set beresp.http.XKey = beresp.http.X-Magento-Tags + ",all";
         unset beresp.http.X-Magento-Tags;
     }
-    {{/if}}
+{{/if}}
 
     # All text-based content can be parsed as ESI
     if (beresp.http.content-type ~ "text") {
@@ -282,12 +293,17 @@ sub vcl_deliver {
 
     # Let browser and Cloudflare cache non-static content that are cacheable for short period of time
     if (resp.http.Cache-Control !~ "private" && req.url !~ "^/(media|static)/" && obj.ttl > 0s) {
-        {{if enable_bfcache}}set resp.http.Cache-Control = "must-revalidate, max-age=60";{{/if}}
-        {{if disable_bfcache}}set resp.http.Cache-Control = "no-store, must-revalidate, max-age=60";{{/if}}
+{{if enable_bfcache}}
+        set resp.http.Cache-Control = "must-revalidate, max-age=60";
+{{else}}
+        set resp.http.Cache-Control = "no-store, must-revalidate, max-age=60";
+{{/if}}
     }
 
     # Remove all headers that don't provide any value for the client
-    {{if use_xkey_vmod}}unset resp.http.XKey;{{/if}}
+{{if use_xkey_vmod}}
+    unset resp.http.XKey;
+{{/if}}
     unset resp.http.Expires;
     unset resp.http.Pragma;
     unset resp.http.X-Magento-Debug;
