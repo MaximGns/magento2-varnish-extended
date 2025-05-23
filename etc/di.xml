@@ -19,4 +19,6 @@
                 type="Elgentos\VarnishExtended\Model\Varnish\VCLGenerator"/>
     <preference for="Magento\PageCache\Model\VclTemplateLocatorInterface"
                 type="Elgentos\VarnishExtended\Model\Varnish\VCLTemplateLocator"/>
+
+    <preference for="Magento\CacheInvalidate\Model\PurgeCache" type="Elgentos\VarnishExtended\Model\PurgeCache"/>
 </config>

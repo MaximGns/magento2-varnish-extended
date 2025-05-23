@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
-    <event name="varnish_cache_invalidate_result">
+    <event name="varnish_cache_purge_invalidate_result">
         <observer name="ReadVarnishFlushResult" instance="Elgentos\VarnishExtended\Observer\PurgeCache\ReadVarnishFlushResult"/>
     </event>
 </config>

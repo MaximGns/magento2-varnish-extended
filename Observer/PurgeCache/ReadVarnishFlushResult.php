@@ -29,8 +29,17 @@ class ReadVarnishFlushResult implements ObserverInterface
             return;
         }
 
+        $result = $this->readInvalidatedResults($result);
+        $this->addConnectedHostsToResult($result, $event->getData('connected_to'));;
+
+        $this->manager->addSuccessMessage($result);
+    }
+
+    protected function readInvalidatedResults(string $read): string
+    {
+        $result = '';
         try {
-            list($headers, $body) = explode("\r\n\r\n", $result, 2);
+            list($headers, $body) = explode("\r\n\r\n", $read, 2);
 
             $dom = new \DOMDocument();
             libxml_use_internal_errors(true);
@@ -41,11 +50,18 @@ class ReadVarnishFlushResult implements ObserverInterface
             if ($paragraphs->length > 0) {
                 $firstParagraph = trim($paragraphs->item(0)->textContent);
                 if (!empty($firstParagraph)) {
-                    $this->manager->addSuccessMessage($firstParagraph);
+                    return $firstParagraph;
                 }
             }
         } catch (\Throwable $exception) {
-            return;
+            return $result;
         }
+
+        return $result;
+    }
+
+    public function addConnectedHostsToResult(string &$result, array $connectedTo): void
+    {
+        $result.= sprintf(' (%s)', implode(':', $connectedTo));
     }
 }
