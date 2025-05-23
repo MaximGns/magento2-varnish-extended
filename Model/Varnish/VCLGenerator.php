@@ -41,7 +41,7 @@ class VCLGenerator extends \Magento\PageCache\Model\Varnish\VclGenerator
         return [
             'host' => $this->backendHost,
             'port' => $this->backendPort,
-            'ips' => $this->getTransformedAccessList(),
+            'access_list' => $this->getTransformedAccessList(),
             'grace_period' => $this->gracePeriod,
             'ssl_offloaded_header' => $this->sslOffloadedHeader,
             'design_exceptions_code' => $this->getRegexForDesignExceptions()
@@ -84,25 +84,10 @@ class VCLGenerator extends \Magento\PageCache\Model\Varnish\VclGenerator
     /**
      * Get IPs access list that can purge Varnish configuration for config file generation
      *
-     * Tansform it to appropriate view
-     *
-     * acl purge{
-     *  "127.0.0.1";
-     *  "127.0.0.2";
-     *
-     * @return string
+     * @return array
      */
-    private function getTransformedAccessList(): string
+    private function getTransformedAccessList(): array
     {
-        $tpl = "    \"%s\";";
-        $result = array_reduce(
-            $this->accessList,
-            function ($ips, $ip) use ($tpl) {
-                return $ips . sprintf($tpl, trim($ip)) . "\n";
-            },
-            ''
-        );
-
-        return rtrim($result ?: '', "\n");
+        return array_map(fn ($x) => ['ip' => trim($x)], $this->accessList);
     }
 }
