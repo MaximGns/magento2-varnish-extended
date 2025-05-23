@@ -4,4 +4,19 @@
     <type name="Magento\PageCache\Model\Varnish\VclGenerator">
         <plugin name="AddReplacements" type="Elgentos\VarnishExtended\Plugin\AddReplacementsPlugin"/>
     </type>
+    <type name="Elgentos\VarnishExtended\Model\TemplateFactory">
+        <arguments>
+            <argument name="directiveProcessors" xsi:type="array">
+                <item name="if" xsi:type="object">Magento\Framework\Filter\DirectiveProcessor\IfDirective</item>
+                <item name="for" xsi:type="object">Magento\Framework\Filter\DirectiveProcessor\ForDirective</item>
+                <item name="var" xsi:type="object">Magento\Framework\Filter\DirectiveProcessor\VarDirective</item>
+            </argument>
+        </arguments>
+    </type>
+    <preference for="Magento\PageCache\Console\Command\GenerateVclCommand"
+                type="Elgentos\VarnishExtended\Console\Command\GenerateVclCommand"/>
+    <preference for="Magento\PageCache\Model\Varnish\VclGenerator"
+                type="Elgentos\VarnishExtended\Model\Varnish\VCLGenerator"/>
+    <preference for="Magento\PageCache\Model\VclTemplateLocatorInterface"
+                type="Elgentos\VarnishExtended\Model\Varnish\VCLTemplateLocator"/>
 </config>
