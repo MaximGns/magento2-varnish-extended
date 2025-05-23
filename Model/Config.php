@@ -9,10 +9,13 @@ use Magento\Framework\HTTP\PhpEnvironment\Request;
 use Magento\Framework\Serialize\Serializer\Json;
 use Magento\PageCache\Model\Config as PageCacheConfig;
 use Magento\PageCache\Model\Varnish\VclGeneratorFactory;
+use Magento\Store\Model\ScopeInterface;
 
 class Config extends PageCacheConfig
 {
     private ScopeConfigInterface $scopeConfig;
+
+    private Json $serializer;
 
     public const string XML_PATH_VARNISH_ENABLE_BFCACHE = 'system/full_page_cache/varnish/enable_bfcache';
 
@@ -24,7 +27,7 @@ class Config extends PageCacheConfig
         \Magento\Framework\App\Cache\StateInterface $cacheState,
         \Magento\Framework\Module\Dir\Reader $reader,
         \Magento\PageCache\Model\Varnish\VclGeneratorFactory $vclGeneratorFactory,
-        \Magento\Framework\Serialize\Serializer\Json $serializer = null
+        Json $serializer
     ) {
         parent::__construct(
             $readFactory,
@@ -34,6 +37,7 @@ class Config extends PageCacheConfig
             $vclGeneratorFactory,
             $serializer
         );
+        $this->serializer = $serializer;
         $this->scopeConfig = $scopeConfig;
     }
 
@@ -75,6 +79,11 @@ class Config extends PageCacheConfig
 
     public function getDesignExceptions()
     {
-        return $this->_getDesignExceptions();
+        $expressions = $this->scopeConfig->getValue(
+            \Magento\PageCache\Model\Config::XML_VARNISH_PAGECACHE_DESIGN_THEME_REGEX,
+            ScopeInterface::SCOPE_STORE
+        );
+
+        return $expressions ? $this->serializer->unserialize($expressions) : [];
     }
 }

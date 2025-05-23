@@ -20,7 +20,6 @@ class VCLTemplateLocator implements VclTemplateLocatorInterface
 {
     private array $supportedVarnishVersions = [
         BaseLocator::VARNISH_SUPPORTED_VERSION_6 => BaseLocator::VARNISH_6_CONFIGURATION_PATH,
-        BaseLocator::VARNISH_SUPPORTED_VERSION_7 => BaseConfig::VARNISH_7_CONFIGURATION_PATH,
     ];
 
     public function __construct(
@@ -29,6 +28,9 @@ class VCLTemplateLocator implements VclTemplateLocatorInterface
         private readonly ScopeConfigInterface $scopeConfig,
         private readonly DirectoryList $directoryList
     ) {
+        if (defined('Magento\PageCache\Model\Varnish\VclTemplateLocator::VARNISH_SUPPORTED_VERSION_7')) {
+            $supportedVarnishVersions[BaseLocator::VARNISH_SUPPORTED_VERSION_7] = BaseConfig::VARNISH_7_CONFIGURATION_PATH;
+        }
     }
 
     /**
