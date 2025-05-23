@@ -29,6 +29,8 @@ class Config extends PageCacheConfig
 
     public const XML_PATH_VARNISH_USE_SOFT_PURGING = 'system/full_page_cache/varnish/use_soft_purging';
 
+    public const XML_PATH_VARNISH_PASS_ON_COOKIE_PRESENCE = 'system/full_page_cache/varnish/pass_on_cookie_presence';
+
     public function __construct(
         \Magento\Framework\Filesystem\Directory\ReadFactory $readFactory,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
@@ -62,6 +64,11 @@ class Config extends PageCacheConfig
     public function getUseSoftPurging(): string
     {
         return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_USE_SOFT_PURGING);
+    }
+
+    public function getPassOnCookiePresence(): array
+    {
+        return $this->serializer->unserialize($this->scopeConfig->getValue(static::XML_PATH_VARNISH_PASS_ON_COOKIE_PRESENCE) ?? '{}');
     }
 
     public function getEnableBfcache(): string

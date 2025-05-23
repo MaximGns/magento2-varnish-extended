@@ -28,6 +28,10 @@ acl purge {
 }
 
 sub vcl_recv {
+    {{for item in pass_on_cookie_presence}}if (req.http.Cookie ~ "{{var item.regex}}") {
+        return (pass);
+    }
+    {{/for}}
     # Remove empty query string parameters
     # e.g.: www.example.com/index.html?
     if (req.url ~ "\?$") {
@@ -73,21 +77,13 @@ sub vcl_recv {
 
         # Full Page Cache flush
         if (req.http.X-Magento-Tags-Pattern == ".*") {
-            if (req.http.X-Magento-Purge-Soft) {
-                set req.http.n-gone = xkey.softpurge("all");
-            } else {
-                set req.http.n-gone = xkey.purge("all");
-            }
+            {{if use_soft_purging}}set req.http.n-gone = xkey.softpurge("all");{{else}}set req.http.n-gone = xkey.purge("all");{{/if}}
             return (synth(200, "Invalidated " + req.http.n-gone + " objects - full flush"));
         } elseif (req.http.X-Magento-Tags-Pattern) {
             # replace "((^|,)cat_c(,|$))|((^|,)cat_p(,|$))" to be "cat_c,cat_p"
             set req.http.X-Magento-Tags-Pattern = regsuball(req.http.X-Magento-Tags-Pattern, "[^a-zA-Z0-9_-]+" ,",");
             set req.http.X-Magento-Tags-Pattern = regsuball(req.http.X-Magento-Tags-Pattern, "(^,*)|(,*$)" ,"");
-            if (req.http.X-Magento-Purge-Soft) {
-                set req.http.n-gone = xkey.softpurge(req.http.X-Magento-Tags-Pattern);
-            } else {
-                set req.http.n-gone = xkey.purge(req.http.X-Magento-Tags-Pattern);
-            }
+            {{if use_soft_purging}}set req.http.n-gone = xkey.softpurge(req.http.X-Magento-Tags-Pattern);{{else}}set req.http.n-gone = xkey.purge(req.http.X-Magento-Tags-Pattern);{{/if}}
             return (synth(200, "Invalidated " + req.http.n-gone + " objects"));
         }
 
