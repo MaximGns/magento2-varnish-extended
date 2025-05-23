@@ -21,6 +21,10 @@ class Config extends PageCacheConfig
 
     public const XML_PATH_VARNISH_TRACKING_PARAMETERS = 'system/full_page_cache/varnish/tracking_parameters';
 
+    public const XML_PATH_VARNISH_USE_XKEY_VMOD = 'system/full_page_cache/varnish/use_xkey_vmod';
+
+    public const XML_PATH_VARNISH_USE_SOFT_PURGING = 'system/full_page_cache/varnish/use_soft_purging';
+
     public function __construct(
         \Magento\Framework\Filesystem\Directory\ReadFactory $readFactory,
         \Magento\Framework\App\Config\ScopeConfigInterface $scopeConfig,
@@ -44,6 +48,16 @@ class Config extends PageCacheConfig
     public function getTrackingParameters(): string
     {
         return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_TRACKING_PARAMETERS);
+    }
+
+    public function getUseXkeyVmod(): string
+    {
+        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_USE_XKEY_VMOD);
+    }
+
+    public function getUseSoftPurging(): string
+    {
+        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_USE_SOFT_PURGING);
     }
 
     public function getEnableBfcache(): string
