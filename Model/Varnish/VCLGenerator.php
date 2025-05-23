@@ -88,6 +88,13 @@ class VCLGenerator extends \Magento\PageCache\Model\Varnish\VclGenerator
      */
     private function getTransformedAccessList(): array
     {
-        return array_map(fn ($x) => ['ip' => trim($x)], $this->accessList);
+        $result = [];
+        foreach ($this->accessList as $ip) {
+            $ip = trim($ip);
+            if (strlen($ip)) {
+                $result[] = ['ip' => $ip];
+            }
+        }
+        return $result;
     }
 }
