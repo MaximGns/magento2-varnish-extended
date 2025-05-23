@@ -298,3 +298,16 @@ sub vcl_deliver {
     unset resp.http.Via;
     unset resp.http.Link;
 }
+
+sub vcl_synth {
+    if(req.method == "PURGE")  {
+        set resp.http.Content-Type = "application/json";
+        if(req.http.X-Magento-Tags-Pattern) {
+            set resp.body = {"{ "invalidated": "} + resp.reason + {" }"};
+        } else {
+            set resp.body = {"{ "invalidated": 1 }"};
+        }
+        set resp.reason = "OK";
+        return(deliver);
+    }
+}
