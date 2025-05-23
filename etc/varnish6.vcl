@@ -4,7 +4,7 @@ vcl 4.1;
 
 import std;
 import cookie;
-import xkey;
+{{if use_xkey_vmod}}import xkey;{{/if}}
 
 # The minimal Varnish version is 6.0
 # For SSL offloading, pass the following header in your proxy server or load balancer: '{{var ssl_offloaded_header }}: https'
@@ -75,6 +75,7 @@ sub vcl_recv {
             return (purge);
         }
 
+        {{if use_xkey_vmod}}
         # Full Page Cache flush
         if (req.http.X-Magento-Tags-Pattern == ".*") {
             {{if use_soft_purging}}set req.http.n-gone = xkey.softpurge("all");{{else}}set req.http.n-gone = xkey.purge("all");{{/if}}
@@ -86,6 +87,7 @@ sub vcl_recv {
             {{if use_soft_purging}}set req.http.n-gone = xkey.softpurge(req.http.X-Magento-Tags-Pattern);{{else}}set req.http.n-gone = xkey.purge(req.http.X-Magento-Tags-Pattern);{{/if}}
             return (synth(200, "Invalidated " + req.http.n-gone + " objects"));
         }
+        {{/if}}
 
         return (synth(200, "Purged"));
     }
@@ -198,11 +200,13 @@ sub vcl_backend_response {
     # Perform asynchronous revalidation while stale content is served
     set beresp.grace = 1d;
 
+    {{if use_xkey_vmod}}
     if (beresp.http.X-Magento-Tags) {
         # set comma separated xkey with "all" tag
         set beresp.http.XKey = beresp.http.X-Magento-Tags + ",all";
         unset beresp.http.X-Magento-Tags;
     }
+    {{/if}}
 
     # All text-based content can be parsed as ESI
     if (beresp.http.content-type ~ "text") {
@@ -253,7 +257,7 @@ sub vcl_deliver {
         }
     }
 
-    unset resp.http.XKey;
+    {{if use_xkey_vmod}}unset resp.http.XKey;{{/if}}
     unset resp.http.Expires;
     unset resp.http.Pragma;
     unset resp.http.X-Magento-Debug;
