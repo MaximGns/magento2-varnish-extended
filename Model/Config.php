@@ -19,6 +19,10 @@ class Config extends PageCacheConfig
 
     public const XML_PATH_VARNISH_ENABLE_BFCACHE = 'system/full_page_cache/varnish/enable_bfcache';
 
+    public const XML_PATH_VARNISH_ENABLE_MEDIA_CACHE = 'system/full_page_cache/varnish/enable_media_cache';
+
+    public const XML_PATH_VARNISH_ENABLE_STATIC_CACHE = 'system/full_page_cache/varnish/enable_static_cache';
+
     public const XML_PATH_VARNISH_TRACKING_PARAMETERS = 'system/full_page_cache/varnish/tracking_parameters';
 
     public const XML_PATH_VARNISH_USE_XKEY_VMOD = 'system/full_page_cache/varnish/use_xkey_vmod';
@@ -56,14 +60,14 @@ class Config extends PageCacheConfig
         }, is_array($trackingParams) ? $trackingParams : json_decode($trackingParams, true)));
     }
 
-    public function getUseXkeyVmod(): string
+    public function getUseXkeyVmod(): bool
     {
-        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_USE_XKEY_VMOD);
+        return (bool) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_USE_XKEY_VMOD);
     }
 
-    public function getUseSoftPurging(): string
+    public function getUseSoftPurging(): bool
     {
-        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_USE_SOFT_PURGING);
+        return (bool) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_USE_SOFT_PURGING);
     }
 
     public function getPassOnCookiePresence(): array
@@ -71,9 +75,9 @@ class Config extends PageCacheConfig
         return $this->serializer->unserialize($this->scopeConfig->getValue(static::XML_PATH_VARNISH_PASS_ON_COOKIE_PRESENCE) ?? '{}');
     }
 
-    public function getEnableBfcache(): string
+    public function getEnableBfcache(): bool
     {
-        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_BFCACHE);
+        return (bool) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_BFCACHE);
     }
 
     public function getSslOffloadedHeader()
@@ -110,5 +114,21 @@ class Config extends PageCacheConfig
         );
 
         return $expressions ? $this->serializer->unserialize($expressions) : [];
+    }
+
+    /**
+     * @return bool
+     */
+    public function getEnableMediaCache(): bool
+    {
+        return (bool) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_MEDIA_CACHE);
+    }
+
+    /**
+     * @return bool
+     */
+    public function getEnableStaticCache(): bool
+    {
+        return (bool) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_STATIC_CACHE);
     }
 }

@@ -11,6 +11,8 @@
             <full_page_cache>
                 <varnish>
                     <enable_bfcache>1</enable_bfcache>
+                    <enable_media_cache>0</enable_media_cache>
+                    <enable_static_cache>0</enable_static_cache>
                     <tracking_parameters>
                         <param__branch_match_id><param>_branch_match_id</param></param__branch_match_id>
                         <param__bta_c><param>_bta_c</param></param__bta_c>

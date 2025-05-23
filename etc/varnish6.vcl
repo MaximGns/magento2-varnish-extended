@@ -2,9 +2,9 @@
 
 vcl 4.1;
 
-import std;
 import cookie;
-import xkey;
+import std;
+{{if use_xkey_vmod}}import xkey;{{/if}}
 
 # The minimal Varnish version is 6.0
 # For SSL offloading, pass the following header in your proxy server or load balancer: '{{var ssl_offloaded_header }}: https'
@@ -22,6 +22,7 @@ backend default {
    }
 }
 
+# Access control list for purge requests
 acl purge {
 {{for item in access_list}}    "{{var item.ip}}";
 {{/for}}
@@ -43,7 +44,8 @@ sub vcl_recv {
         set req.http.Host = regsub(req.http.Host, ":[0-9]+$", "");
     }
 
-    # Sorts query string parameters alphabetically for cache normalization purposes, only when there are multiple parameters
+    # Sorts query string parameters alphabetically for cache normalization purposes,
+    # only when there are multiple parameters
     if (req.url ~ "\?.+&.+") {
         set req.url = std.querysort(req.url);
     }
@@ -75,14 +77,18 @@ sub vcl_recv {
             return (purge);
         }
 
+        {{if use_xkey_vmod}}
         # Full Page Cache flush
         if (req.http.X-Magento-Tags-Pattern == ".*") {
+            # If Magento wants to flush everything with .* regexp, it's faster to remove them
+            # using the 'all' tag. This tag is automatically added by this VCL when a backend
+            # is generated (see vcl_backend_response).
             if (req.http.X-Magento-Purge-Soft) {
                 set req.http.n-gone = xkey.softpurge("all");
             } else {
                 set req.http.n-gone = xkey.purge("all");
             }
-            return (synth(200, "Invalidated " + req.http.n-gone + " objects - full flush"));
+            return (synth(200, req.http.n-gone));
         } elseif (req.http.X-Magento-Tags-Pattern) {
             # replace "((^|,)cat_c(,|$))|((^|,)cat_p(,|$))" to be "cat_c,cat_p"
             set req.http.X-Magento-Tags-Pattern = regsuball(req.http.X-Magento-Tags-Pattern, "[^a-zA-Z0-9_-]+" ,",");
@@ -92,10 +98,20 @@ sub vcl_recv {
             } else {
                 set req.http.n-gone = xkey.purge(req.http.X-Magento-Tags-Pattern);
             }
-            return (synth(200, "Invalidated " + req.http.n-gone + " objects"));
+            return (synth(200, req.http.n-gone));
         }
-
-        return (synth(200, "Purged"));
+        {{else}}
+        if (req.method == "PURGE") {
+            if (client.ip !~ purge) {
+                return (synth(405, "Method not allowed"));
+            }
+            if (!req.http.X-Magento-Tags-Pattern) {
+                return (purge);
+            }
+            ban("obj.http.X-Magento-Tags ~ " + req.http.X-Magento-Tags-Pattern);
+            return (synth(200, "0"));
+        }
+        {{/if}}
     }
 
     if (req.method != "GET" &&
@@ -119,10 +135,14 @@ sub vcl_recv {
         return (pass);
     }
 
-    # Collapse multiple cookie headers into one
+    # Collapse multiple cookie headers into one.
+    # We do this, because clients often send a Cookie header for each cookie they have.
+    # We want to join them all together with the ';' separator, so we can parse them in one batch.
     std.collect(req.http.Cookie, ";");
 
-    # Parse the cookie header
+    # Parse the cookie header.
+    # This means that we can use the cookie functions to check for cookie existence,
+    # values, etc down the line.
     cookie.parse(req.http.cookie);
 
     # Add support for Prismic preview functionality
@@ -131,7 +151,7 @@ sub vcl_recv {
         return (pass);
     }
 
-    # Remove all marketing get parameters to minimize the cache objects
+    # Remove all marketing/tracking get parameters to minimize the cache objects
     if (req.url ~ "(\?|&)({{var tracking_parameters}})=") {
         set req.url = regsuball(req.url, "({{var tracking_parameters}})=[-_A-z0-9+(){}%.]+&?", "");
         set req.url = regsub(req.url, "[?|&]+$", "");
@@ -139,24 +159,18 @@ sub vcl_recv {
 
     # Media files caching
     if (req.url ~ "^/(pub/)?media/") {
-        if ( 0 ) { # TODO MAKE CONFIGURABLE: Cache media files
-            unset req.http.Https;
+            {{if enable_media_cache}}unset req.http.Https;
             unset req.http.{{var ssl_offloaded_header}};
             unset req.http.Cookie;
-        } else {
-            return (pass);
-        }
+        {{else}}return (pass);{{/if}}
     }
 
     # Static files caching
     if (req.url ~ "^/(pub/)?static/") {
-        if ( 0 ) { # TODO MAKE CONFIGURABLE: Cache static files
-            unset req.http.Https;
+            {{if enable_static_cache}}unset req.http.Https;
             unset req.http.{{var ssl_offloaded_header}};
             unset req.http.Cookie;
-        } else {
-            return (pass);
-        }
+        {{else}}return (pass);{{/if}}
     }
 
     # Don't cache the authenticated GraphQL requests
@@ -168,6 +182,9 @@ sub vcl_recv {
 }
 
 sub vcl_hash {
+    # For non-graphql requests we add the value of the Magento Vary cookie to the
+    # object hash. This vary cookie can contain things like currency, store code, etc.
+    # These variations are typically rendered server-side, so we need to cache them separately.
     if (req.url !~ "/graphql" && cookie.isset("X-Magento-Vary=")) {
         hash_data(cookie.get("X-Magento-Vary"));
     }
@@ -177,12 +194,16 @@ sub vcl_hash {
 
     {{var design_exceptions_code}}
 
+    # For graphql requests we execute the process_graphql_headers subroutine
     if (req.url ~ "/graphql") {
         call process_graphql_headers;
     }
 }
 
 sub process_graphql_headers {
+    # The X-Magento-Cache-Id header is used by graphql clients to let the backend
+    # know which variant it is. It's basically the same as the Vary # cookie, but
+    # for graphql requests.
     if (req.http.X-Magento-Cache-Id) {
         hash_data(req.http.X-Magento-Cache-Id);
 
@@ -192,25 +213,29 @@ sub process_graphql_headers {
         }
     }
 
+    # If store header is specified by client, add it to the hash
     if (req.http.Store) {
         hash_data(req.http.Store);
     }
 
+    # If content-currency header is specified, add it to the hash
     if (req.http.Content-Currency) {
         hash_data(req.http.Content-Currency);
     }
 }
 
 sub vcl_backend_response {
-    # Serve stale content for three days after object expiration
-    # Perform asynchronous revalidation while stale content is served
+    # Serve stale content for one day after object expiration while a fresh
+    version is fetched in the background.
     set beresp.grace = 1d;
 
+    {{if use_xkey_vmod}}
     if (beresp.http.X-Magento-Tags) {
-        # set comma separated xkey with "all" tag
+        # set comma separated xkey with "all" tag, allowing for fast full purges
         set beresp.http.XKey = beresp.http.X-Magento-Tags + ",all";
         unset beresp.http.X-Magento-Tags;
     }
+    {{/if}}
 
     # All text-based content can be parsed as ESI
     if (beresp.http.content-type ~ "text") {
@@ -235,6 +260,8 @@ sub vcl_backend_response {
 
     # Remove the Set-Cookie header for cacheable content
     # Only for HTTP GET & HTTP HEAD requests
+    # We remove the Set-Cookie header from the VCL response, because we want to keep
+    # the objects in the cache anonymous.
     if (beresp.ttl > 0s && (bereq.method == "GET" || bereq.method == "HEAD")) {
         unset beresp.http.Set-Cookie;
     }
@@ -255,13 +282,12 @@ sub vcl_deliver {
 
     # Let browser and Cloudflare cache non-static content that are cacheable for short period of time
     if (resp.http.Cache-Control !~ "private" && req.url !~ "^/(media|static)/" && obj.ttl > 0s) {
-        set resp.http.Cache-Control = "must-revalidate, max-age=60";
-        if ( 0 ) { # TODO MAKE CONFIGURABLE: Enable/disable backward-forward cache (default enabled)
-            set resp.http.Cache-Control = resp.http.Cache-Control + ", no-store";
-        }
+        {{if enable_bfcache}}set resp.http.Cache-Control = "must-revalidate, max-age=60";{{/if}}
+        {{if disable_bfcache}}set resp.http.Cache-Control = "no-store, must-revalidate, max-age=60";{{/if}}
     }
 
-    unset resp.http.XKey;
+    # Remove all headers that don't provide any value for the client
+    {{if use_xkey_vmod}}unset resp.http.XKey;{{/if}}
     unset resp.http.Expires;
     unset resp.http.Pragma;
     unset resp.http.X-Magento-Debug;
@@ -271,4 +297,17 @@ sub vcl_deliver {
     unset resp.http.X-Varnish;
     unset resp.http.Via;
     unset resp.http.Link;
+}
+
+sub vcl_synth {
+    if(req.method == "PURGE")  {
+        set resp.http.Content-Type = "application/json";
+        if(req.http.X-Magento-Tags-Pattern) {
+            set resp.body = {"{ "invalidated": "} + resp.reason + {" }"};
+        } else {
+            set resp.body = {"{ "invalidated": 1 }"};
+        }
+        set resp.reason = "OK";
+        return(deliver);
+    }
 }

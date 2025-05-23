@@ -47,11 +47,14 @@ class VCLGenerator extends \Magento\PageCache\Model\Varnish\VclGenerator
             'grace_period' => $this->gracePeriod,
             'ssl_offloaded_header' => $this->sslOffloadedHeader,
             'tracking_parameters' => $this->varnishExtendedConfig->getTrackingParameters(),
-            'enable_bfcache' => $this->varnishExtendedConfig->getEnableBfcache(),
-            'use_xkey_vmod' => $this->varnishExtendedConfig->getUseXkeyVmod(),
-            'use_soft_purging' => $this->varnishExtendedConfig->getUseSoftPurging(),
+            'enable_bfcache' => (bool) $this->varnishExtendedConfig->getEnableBfcache(),
+            'disable_bfcache' => (bool) !$this->varnishExtendedConfig->getEnableBfcache(),
+            'enable_media_cache' => (bool) $this->varnishExtendedConfig->getEnableMediaCache(),
+            'enable_static_cache' => (bool) $this->varnishExtendedConfig->getEnableStaticCache(),
+            'use_xkey_vmod' => (int) $this->varnishExtendedConfig->getUseXkeyVmod(),
+            'use_soft_purging' => (int) $this->varnishExtendedConfig->getUseSoftPurging(),
             'pass_on_cookie_presence' => $this->varnishExtendedConfig->getPassOnCookiePresence(),
-            'design_exceptions_code' => $this->getRegexForDesignExceptions(),
+            'design_exceptions_code' => $this->getRegexForDesignExceptions()
         ];
     }
 
