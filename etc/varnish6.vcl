@@ -4,7 +4,7 @@ vcl 4.1;
 
 import cookie;
 import std;
-import xkey;
+{{if use_xkey_vmod}}import xkey;{{/if}}
 
 # The minimal Varnish version is 6.0
 # For SSL offloading, pass the following header in your proxy server or load balancer: '{{var ssl_offloaded_header }}: https'
@@ -29,6 +29,10 @@ acl purge {
 }
 
 sub vcl_recv {
+    {{for item in pass_on_cookie_presence}}if (req.http.Cookie ~ "{{var item.regex}}") {
+        return (pass);
+    }
+    {{/for}}
     # Remove empty query string parameters
     # e.g.: www.example.com/index.html?
     if (req.url ~ "\?$") {
@@ -73,6 +77,7 @@ sub vcl_recv {
             return (purge);
         }
 
+        {{if use_xkey_vmod}}
         # Full Page Cache flush
         if (req.http.X-Magento-Tags-Pattern == ".*") {
             # If Magento wants to flush everything with .* regexp, it's faster to remove them
@@ -95,6 +100,7 @@ sub vcl_recv {
             }
             return (synth(200, "Invalidated " + req.http.n-gone + " objects"));
         }
+        {{/if}}
 
         return (synth(200, "Purged"));
     }
@@ -144,7 +150,7 @@ sub vcl_recv {
 
     # Media files caching
     if (req.url ~ "^/(pub/)?media/") {
-        if ( 0 ) { # TODO MAKE CONFIGURABLE: Cache media files
+        if ( {{var enable_media_cache}} ) {
             unset req.http.Https;
             unset req.http.{{var ssl_offloaded_header}};
             unset req.http.Cookie;
@@ -155,7 +161,7 @@ sub vcl_recv {
 
     # Static files caching
     if (req.url ~ "^/(pub/)?static/") {
-        if ( 0 ) { # TODO MAKE CONFIGURABLE: Cache static files
+        if ( {{var enable_static_cache}} ) {
             unset req.http.Https;
             unset req.http.{{var ssl_offloaded_header}};
             unset req.http.Cookie;
@@ -220,11 +226,13 @@ sub vcl_backend_response {
     version is fetched in the background.
     set beresp.grace = 1d;
 
+    {{if use_xkey_vmod}}
     if (beresp.http.X-Magento-Tags) {
         # set comma separated xkey with "all" tag, allowing for fast full purges
         set beresp.http.XKey = beresp.http.X-Magento-Tags + ",all";
         unset beresp.http.X-Magento-Tags;
     }
+    {{/if}}
 
     # All text-based content can be parsed as ESI
     if (beresp.http.content-type ~ "text") {
@@ -278,7 +286,7 @@ sub vcl_deliver {
     }
 
     # Remove all headers that don't provide any value for the client
-    unset resp.http.XKey;
+    {{if use_xkey_vmod}}unset resp.http.XKey;{{/if}}
     unset resp.http.Expires;
     unset resp.http.Pragma;
     unset resp.http.X-Magento-Debug;

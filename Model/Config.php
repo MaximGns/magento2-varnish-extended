@@ -19,11 +19,17 @@ class Config extends PageCacheConfig
 
     public const XML_PATH_VARNISH_ENABLE_BFCACHE = 'system/full_page_cache/varnish/enable_bfcache';
 
+    public const XML_PATH_VARNISH_ENABLE_MEDIA_CACHE = 'system/full_page_cache/varnish/enable_media_cache';
+
+    public const XML_PATH_VARNISH_ENABLE_STATIC_CACHE = 'system/full_page_cache/varnish/enable_static_cache';
+
     public const XML_PATH_VARNISH_TRACKING_PARAMETERS = 'system/full_page_cache/varnish/tracking_parameters';
 
     public const XML_PATH_VARNISH_USE_XKEY_VMOD = 'system/full_page_cache/varnish/use_xkey_vmod';
 
     public const XML_PATH_VARNISH_USE_SOFT_PURGING = 'system/full_page_cache/varnish/use_soft_purging';
+
+    public const XML_PATH_VARNISH_PASS_ON_COOKIE_PRESENCE = 'system/full_page_cache/varnish/pass_on_cookie_presence';
 
     public function __construct(
         \Magento\Framework\Filesystem\Directory\ReadFactory $readFactory,
@@ -50,19 +56,24 @@ class Config extends PageCacheConfig
         return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_TRACKING_PARAMETERS);
     }
 
-    public function getUseXkeyVmod(): string
+    public function getUseXkeyVmod(): bool
     {
-        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_USE_XKEY_VMOD);
+        return (bool) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_USE_XKEY_VMOD);
     }
 
-    public function getUseSoftPurging(): string
+    public function getUseSoftPurging(): bool
     {
-        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_USE_SOFT_PURGING);
+        return (bool) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_USE_SOFT_PURGING);
     }
 
-    public function getEnableBfcache(): string
+    public function getPassOnCookiePresence(): array
     {
-        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_BFCACHE);
+        return $this->serializer->unserialize($this->scopeConfig->getValue(static::XML_PATH_VARNISH_PASS_ON_COOKIE_PRESENCE) ?? '{}');
+    }
+
+    public function getEnableBfcache(): bool
+    {
+        return (bool) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_BFCACHE);
     }
 
     public function getSslOffloadedHeader()
@@ -99,5 +110,21 @@ class Config extends PageCacheConfig
         );
 
         return $expressions ? $this->serializer->unserialize($expressions) : [];
+    }
+
+    /**
+     * @return bool
+     */
+    public function getEnableMediaCache()
+    {
+        return (boolean) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_MEDIA_CACHE);
+    }
+
+    /**
+     * @return bool
+     */
+    public function getEnableStaticCache()
+    {
+        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_STATIC_CACHE);
     }
 }
