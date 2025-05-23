@@ -12,18 +12,15 @@ class ExtendedLaminasSocket extends Socket
 {
     public const HEADER_X_MAGENTO_PURGE_SOFT = 'X-Magento-Purge-Soft';
 
-    protected ?Manager $eventManager = null;
-    protected ?ScopeConfigInterface $scopeConfig = null;
-
     /**
      * @param Manager $eventManager
      * @param ScopeConfigInterface $scopeConfig
      */
-    public function __construct(Manager $eventManager, ScopeConfigInterface $scopeConfig)
-    {
+    public function __construct(
+        private readonly Manager $eventManager,
+        private readonly ScopeConfigInterface $scopeConfig
+    ) {
         parent::__construct();
-        $this->eventManager = $eventManager;
-        $this->scopeConfig = $scopeConfig;
     }
 
     public function read(): string

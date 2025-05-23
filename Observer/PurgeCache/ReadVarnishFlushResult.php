@@ -10,11 +10,8 @@ use Magento\Framework\Message\Manager;
 
 class ReadVarnishFlushResult implements ObserverInterface
 {
-    private ?Manager $manager = null;
-
-    public function __construct(Manager $manager)
+    public function __construct(private readonly Manager $manager)
     {
-        $this->manager = $manager;
     }
 
     /**

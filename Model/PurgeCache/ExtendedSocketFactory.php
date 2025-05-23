@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Elgentos\VarnishExtended\Model\PurgeCache;
 
 use Magento\CacheInvalidate\Model\SocketFactory;
-use Elgentos\VarnishExtended\Model\ExtendedLaminasSocket;
-use Elgentos\VarnishExtended\Model\ExtendedLaminasSocketFactory;
+use Elgentos\VarnishExtended\Model\PurgeCache\ExtendedLaminasSocket;
+use Elgentos\VarnishExtended\Model\PurgeCache\ExtendedLaminasSocketFactory;
 
 class ExtendedSocketFactory extends SocketFactory
 {
