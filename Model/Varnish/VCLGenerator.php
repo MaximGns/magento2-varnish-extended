@@ -18,8 +18,8 @@ class VCLGenerator extends \Magento\PageCache\Model\Varnish\VclGenerator
         private readonly array $accessList,
         private readonly string $gracePeriod,
         private readonly string $sslOffloadedHeader,
-        private readonly Config $config,
-        private readonly array $designExceptions = []
+        private readonly Config $varnishExtendedConfig,
+        private readonly array $designExceptions = [],
     ) {
         parent::__construct(
             $vclTemplateLocator,
@@ -43,12 +43,16 @@ class VCLGenerator extends \Magento\PageCache\Model\Varnish\VclGenerator
         return [
             'host' => $this->backendHost,
             'port' => $this->backendPort,
-            'ips' => $this->getTransformedAccessList(),
+            'access_list' => $this->getTransformedAccessList(),
             'grace_period' => $this->gracePeriod,
             'ssl_offloaded_header' => $this->sslOffloadedHeader,
-            'design_exceptions_code' => $this->getRegexForDesignExceptions(),
-            'enable_media_cache' => $this->config->getEnableMediaCache(),
-            'enable_static_cache' => $this->config->getEnableStaticCache()
+            'tracking_parameters' => $this->varnishExtendedConfig->getTrackingParameters(),
+            'enable_bfcache' => $this->varnishExtendedConfig->getEnableBfcache(),
+            'enable_media_cache' => $this->varnishExtendedConfig->getEnableMediaCache(),
+            'enable_static_cache' => $this->varnishExtendedConfig->getEnableStaticCache(),
+            'use_xkey_vmod' => $this->varnishExtendedConfig->getUseXkeyVmod(),
+            'use_soft_purging' => $this->varnishExtendedConfig->getUseSoftPurging(),
+            'design_exceptions_code' => $this->getRegexForDesignExceptions()
         ];
     }
 
@@ -88,25 +92,17 @@ class VCLGenerator extends \Magento\PageCache\Model\Varnish\VclGenerator
     /**
      * Get IPs access list that can purge Varnish configuration for config file generation
      *
-     * Tansform it to appropriate view
-     *
-     * acl purge{
-     *  "127.0.0.1";
-     *  "127.0.0.2";
-     *
-     * @return string
+     * @return array
      */
-    private function getTransformedAccessList(): string
+    private function getTransformedAccessList(): array
     {
-        $tpl = "    \"%s\";";
-        $result = array_reduce(
-            $this->accessList,
-            function ($ips, $ip) use ($tpl) {
-                return $ips . sprintf($tpl, trim($ip)) . "\n";
-            },
-            ''
-        );
-
-        return rtrim($result ?: '', "\n");
+        $result = [];
+        foreach ($this->accessList as $ip) {
+            $ip = trim($ip);
+            if (strlen($ip)) {
+                $result[] = ['ip' => $ip];
+            }
+        }
+        return $result;
     }
 }

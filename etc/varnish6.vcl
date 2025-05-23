@@ -23,7 +23,8 @@ backend default {
 }
 
 acl purge {
-{{var ips}}
+{{for item in access_list}}    "{{var item.ip}}";
+{{/for}}
 }
 
 sub vcl_recv {
@@ -49,6 +50,13 @@ sub vcl_recv {
         set req.grace = {{var grace_period}}s;
     }
 
+    # Allow cache purge via Ctrl-Shift-R or Cmd-Shift-R for IP's in purge ACL list
+    if (req.http.pragma ~ "no-cache" || req.http.Cache-Control ~ "no-cache") {
+        if (client.ip ~ purge) {
+            set req.hash_always_miss = true;
+        }
+    }
+
     # Purge logic to remove objects from the cache
     # Tailored to Magento's cache invalidation mechanism
     # The X-Magento-Tags-Pattern value is matched to the tags in the X-Magento-Tags header
@@ -65,7 +73,7 @@ sub vcl_recv {
 
         # Full Page Cache flush
         if (req.http.X-Magento-Tags-Pattern == ".*") {
-            if (0) { # CONFIGURABLE: soft purge
+            if (req.http.X-Magento-Purge-Soft) {
                 set req.http.n-gone = xkey.softpurge("all");
             } else {
                 set req.http.n-gone = xkey.purge("all");
@@ -75,7 +83,7 @@ sub vcl_recv {
             # replace "((^|,)cat_c(,|$))|((^|,)cat_p(,|$))" to be "cat_c,cat_p"
             set req.http.X-Magento-Tags-Pattern = regsuball(req.http.X-Magento-Tags-Pattern, "[^a-zA-Z0-9_-]+" ,",");
             set req.http.X-Magento-Tags-Pattern = regsuball(req.http.X-Magento-Tags-Pattern, "(^,*)|(,*$)" ,"");
-            if ( 1 ) { # CONFIGURABLE: Use softpurge
+            if (req.http.X-Magento-Purge-Soft) {
                 set req.http.n-gone = xkey.softpurge(req.http.X-Magento-Tags-Pattern);
             } else {
                 set req.http.n-gone = xkey.purge(req.http.X-Magento-Tags-Pattern);
@@ -120,9 +128,8 @@ sub vcl_recv {
     }
 
     # Remove all marketing get parameters to minimize the cache objects
-    # TODO MAKE CONFIGURABLE
-    if (req.url ~ "(\?|&)(_branch_match_id|srsltid|_bta_c|_bta_tid|_ga|_gl|_ke|_kx|campid|cof|customid|cx|dclid|dm_i|ef_id|epik|fbclid|gad_source|gbraid|gclid|gclsrc|gdffi|gdfms|gdftrk|hsa_acc|hsa_ad|hsa_cam|hsa_grp|hsa_kw|hsa_mt|hsa_net|hsa_src|hsa_tgt|hsa_ver|ie|igshid|irclickid|matomo_campaign|matomo_cid|matomo_content|matomo_group|matomo_keyword|matomo_medium|matomo_placement|matomo_source|mc_cid|mc_eid|mkcid|mkevt|mkrid|mkwid|msclkid|mtm_campaign|mtm_cid|mtm_content|mtm_group|mtm_keyword|mtm_medium|mtm_placement|mtm_source|nb_klid|ndclid|origin|pcrid|piwik_campaign|piwik_keyword|piwik_kwd|pk_campaign|pk_keyword|pk_kwd|redirect_log_mongo_id|redirect_mongo_id|rtid|sb_referer_host|ScCid|si|siteurl|s_kwcid|sms_click|sms_source|sms_uph|toolid|trk_contact|trk_module|trk_msg|trk_sid|ttclid|twclid|utm_campaign|utm_content|utm_creative_format|utm_id|utm_marketing_tactic|utm_medium|utm_source|utm_source_platform|utm_term|wbraid|yclid|zanpid|mc_[a-z]+|utm_[a-z]+|_bta_[a-z]+)=") {
-        set req.url = regsuball(req.url, "(_branch_match_id|srsltid|_bta_c|_bta_tid|_ga|_gl|_ke|_kx|campid|cof|customid|cx|dclid|dm_i|ef_id|epik|fbclid|gad_source|gbraid|gclid|gclsrc|gdffi|gdfms|gdftrk|hsa_acc|hsa_ad|hsa_cam|hsa_grp|hsa_kw|hsa_mt|hsa_net|hsa_src|hsa_tgt|hsa_ver|ie|igshid|irclickid|matomo_campaign|matomo_cid|matomo_content|matomo_group|matomo_keyword|matomo_medium|matomo_placement|matomo_source|mc_cid|mc_eid|mkcid|mkevt|mkrid|mkwid|msclkid|mtm_campaign|mtm_cid|mtm_content|mtm_group|mtm_keyword|mtm_medium|mtm_placement|mtm_source|nb_klid|ndclid|origin|pcrid|piwik_campaign|piwik_keyword|piwik_kwd|pk_campaign|pk_keyword|pk_kwd|redirect_log_mongo_id|redirect_mongo_id|rtid|sb_referer_host|ScCid|si|siteurl|s_kwcid|sms_click|sms_source|sms_uph|toolid|trk_contact|trk_module|trk_msg|trk_sid|ttclid|twclid|utm_campaign|utm_content|utm_creative_format|utm_id|utm_marketing_tactic|utm_medium|utm_source|utm_source_platform|utm_term|wbraid|yclid|zanpid|mc_[a-z]+|utm_[a-z]+|_bta_[a-z]+)=[-_A-z0-9+(){}%.]+&?", "");
+    if (req.url ~ "(\?|&)({{var tracking_parameters}})=") {
+        set req.url = regsuball(req.url, "({{var tracking_parameters}})=[-_A-z0-9+(){}%.]+&?", "");
         set req.url = regsub(req.url, "[?|&]+$", "");
     }
 
@@ -162,7 +169,7 @@ sub vcl_hash {
     }
 
     # To make sure http users don't see ssl warning
-    hash_data(req.http.{{var ssl_offloaded_header }});
+    hash_data(req.http.{{var ssl_offloaded_header}});
 
     {{var design_exceptions_code}}
 
@@ -232,9 +239,12 @@ sub vcl_backend_response {
 sub vcl_deliver {
     if (obj.uncacheable) {
         set resp.http.X-Magento-Cache-Debug = "UNCACHEABLE";
-    } else if (obj.hits) {
+    } else if (obj.hits > 0 && obj.ttl > 0s) {
         set resp.http.X-Magento-Cache-Debug = "HIT";
-        set resp.http.Grace = req.http.grace;
+    } else if (obj.hits > 0 && obj.ttl <= 0s) {
+        set resp.http.X-Magento-Cache-Debug = "HIT-GRACE";
+    } else if(req.hash_always_miss) {
+        set resp.http.X-Magento-Cache-Debug = "MISS-FORCED";
     } else {
         set resp.http.X-Magento-Cache-Debug = "MISS";
     }

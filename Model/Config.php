@@ -17,11 +17,17 @@ class Config extends PageCacheConfig
 
     private Json $serializer;
 
-    public const string XML_PATH_VARNISH_ENABLE_BFCACHE = 'system/full_page_cache/varnish/enable_bfcache';
+    public const XML_PATH_VARNISH_ENABLE_BFCACHE = 'system/full_page_cache/varnish/enable_bfcache';
 
-    public const string XML_PATH_VARNISH_ENABLE_STATIC_CACHE = 'system/full_page_cache/varnish/enable_static_cache';
+    public const XML_PATH_VARNISH_ENABLE_MEDIA_CACHE = 'system/full_page_cache/varnish/enable_media_cache';
 
-    public const string XML_PATH_VARNISH_TRACKING_PARAMETERS = 'system/full_page_cache/varnish/tracking_parameters';
+    public const XML_PATH_VARNISH_ENABLE_STATIC_CACHE = 'system/full_page_cache/varnish/enable_static_cache';
+
+    public const XML_PATH_VARNISH_TRACKING_PARAMETERS = 'system/full_page_cache/varnish/tracking_parameters';
+
+    public const XML_PATH_VARNISH_USE_XKEY_VMOD = 'system/full_page_cache/varnish/use_xkey_vmod';
+
+    public const XML_PATH_VARNISH_USE_SOFT_PURGING = 'system/full_page_cache/varnish/use_soft_purging';
 
     public function __construct(
         \Magento\Framework\Filesystem\Directory\ReadFactory $readFactory,
@@ -45,12 +51,22 @@ class Config extends PageCacheConfig
 
     public function getTrackingParameters(): string
     {
-        return $this->scopeConfig->getValue(self::XML_PATH_VARNISH_TRACKING_PARAMETERS);
+        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_TRACKING_PARAMETERS);
+    }
+
+    public function getUseXkeyVmod(): string
+    {
+        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_USE_XKEY_VMOD);
+    }
+
+    public function getUseSoftPurging(): string
+    {
+        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_USE_SOFT_PURGING);
     }
 
     public function getEnableBfcache(): string
     {
-        return $this->scopeConfig->getValue(self::XML_PATH_VARNISH_ENABLE_BFCACHE);
+        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_BFCACHE);
     }
 
     public function getSslOffloadedHeader()
@@ -60,23 +76,23 @@ class Config extends PageCacheConfig
 
     public function getBackendHost()
     {
-        return $this->scopeConfig->getValue(self::XML_VARNISH_PAGECACHE_BACKEND_HOST);
+        return $this->scopeConfig->getValue(static::XML_VARNISH_PAGECACHE_BACKEND_HOST);
     }
 
     public function getBackendPort()
     {
-        return $this->scopeConfig->getValue(self::XML_VARNISH_PAGECACHE_BACKEND_PORT);
+        return $this->scopeConfig->getValue(static::XML_VARNISH_PAGECACHE_BACKEND_PORT);
     }
 
     public function getAccessList()
     {
-        $accessList = $this->_scopeConfig->getValue(self::XML_VARNISH_PAGECACHE_ACCESS_LIST);
+        $accessList = $this->_scopeConfig->getValue(static::XML_VARNISH_PAGECACHE_ACCESS_LIST);
         return array_map('trim', explode(',', $accessList));
     }
 
     public function getGracePeriod()
     {
-        return $this->scopeConfig->getValue(self::XML_VARNISH_PAGECACHE_GRACE_PERIOD);
+        return $this->scopeConfig->getValue(static::XML_VARNISH_PAGECACHE_GRACE_PERIOD);
     }
 
     public function getDesignExceptions()
@@ -92,16 +108,16 @@ class Config extends PageCacheConfig
     /**
      * @return bool
      */
-    public function getEnableMediaCache(): bool
+    public function getEnableMediaCache()
     {
-        return (boolean) $this->scopeConfig->getValue(SELF::XML_PATH_VARNISH_ENABLE_MEDIA_CACHE);
+        return (boolean) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_MEDIA_CACHE);
     }
 
     /**
      * @return bool
      */
-    public function getEnableStaticCache(): bool
+    public function getEnableStaticCache()
     {
-        return (boolean) $this->scopeConfig->getValue(SELF::XML_PATH_VARNISH_ENABLE_STATIC_CACHE);
+        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_STATIC_CACHE);
     }
 }
