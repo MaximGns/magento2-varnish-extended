@@ -49,7 +49,11 @@ class Config extends PageCacheConfig
 
     public function getTrackingParameters(): string
     {
-        return $this->scopeConfig->getValue(static::XML_PATH_VARNISH_TRACKING_PARAMETERS);
+        $trackingParams = $this->scopeConfig->getValue(static::XML_PATH_VARNISH_TRACKING_PARAMETERS);
+
+        return implode('|', array_map(function ($param) {
+            return $param['param'];
+        }, is_array($trackingParams) ? $trackingParams : json_decode($trackingParams, true)));
     }
 
     public function getUseXkeyVmod(): string
