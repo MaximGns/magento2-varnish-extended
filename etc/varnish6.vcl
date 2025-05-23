@@ -50,6 +50,14 @@ sub vcl_recv {
         set req.grace = {{var grace_period}}s;
     }
 
+    # Allow cache purge via Ctrl-Shift-R or Cmd-Shift-R for IP's in purge ACL list
+    if (req.http.pragma ~ "no-cache" || req.http.Cache-Control ~ "no-cache") {
+        if (client.ip ~ purge) {
+            set req.http.X-Cache-NoCacheWarning = "FORCED CACHE MISS via no-cache header";
+            ban("req.http.host == " + req.http.host + " && req.url == " + req.url);
+        }
+    }
+
     # Purge logic to remove objects from the cache
     # Tailored to Magento's cache invalidation mechanism
     # The X-Magento-Tags-Pattern value is matched to the tags in the X-Magento-Tags header
