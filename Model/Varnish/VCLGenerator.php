@@ -50,6 +50,7 @@ class VCLGenerator extends \Magento\PageCache\Model\Varnish\VclGenerator
             'enable_bfcache' => $this->varnishExtendedConfig->getEnableBfcache(),
             'use_xkey_vmod' => $this->varnishExtendedConfig->getUseXkeyVmod(),
             'use_soft_purging' => $this->varnishExtendedConfig->getUseSoftPurging(),
+            'pass_on_cookie_presence' => $this->varnishExtendedConfig->getPassOnCookiePresence(),
             'design_exceptions_code' => $this->getRegexForDesignExceptions(),
         ];
     }

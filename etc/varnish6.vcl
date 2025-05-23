@@ -28,6 +28,10 @@ acl purge {
 }
 
 sub vcl_recv {
+    {{for item in pass_on_cookie_presence}}if (req.http.Cookie ~ "{{var item.regex}}") {
+        return (pass);
+    }
+    {{/for}}
     # Remove empty query string parameters
     # e.g.: www.example.com/index.html?
     if (req.url ~ "\?$") {
