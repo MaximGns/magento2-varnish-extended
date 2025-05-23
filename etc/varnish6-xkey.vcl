@@ -139,7 +139,7 @@ sub vcl_recv {
 
     # Static files caching
     if (req.url ~ "^/(pub/)?static/") {
-        if ( 0 ) { # TODO MAKE CONFIGURABLE: Cache static files
+        if (/* {{ enable_static_cache }} */) { # TODO MAKE CONFIGURABLE: Cache static files
             unset req.http.Https;
             unset req.http./* {{ ssl_offloaded_header }} */;
             unset req.http.Cookie;

@@ -40,6 +40,7 @@ class AddReplacementsPlugin
     protected function getReplacements(): array {
         return [
             '/* {{ tracking_parameters }} */' => $this->config->getTrackingParameters(),
+            '/* {{ enable_static_cache }} */' => $this->config->isStaticCacheEnabled()
         ];
     }
 }

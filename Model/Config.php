@@ -16,4 +16,12 @@ class Config
     {
         return $this->scopeConfig->getValue('system/full_page_cache/varnish/tracking_parameters');
     }
+
+    /**
+     * @return bool
+     */
+    public function isStaticCacheEnabled(): bool
+    {
+        return (boolean) $this->scopeConfig->getValue('system/full_page_cache/varnish/enable_static_cache');
+    }
 }
