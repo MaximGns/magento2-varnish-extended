@@ -50,7 +50,6 @@ class VCLTemplateLocator implements VclTemplateLocatorInterface
             $directoryRead  = $this->readFactory->create($moduleEtcPath);
             $configFilePath = $directoryRead->getRelativePath($configFilePath);
             try {
-                printf("VCL template: %s/%s\n", $moduleEtcPath, $configFilePath);
                 $template = $directoryRead->readFile($configFilePath);
             } catch (FileSystemException $e) {
                 continue;

@@ -1,14 +1,11 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
-    <type name="Magento\PageCache\Model\Varnish\VclGenerator">
-        <plugin name="AddReplacements" type="Elgentos\VarnishExtended\Plugin\AddReplacementsPlugin"/>
-    </type>
     <type name="Elgentos\VarnishExtended\Model\TemplateFactory">
         <arguments>
             <argument name="directiveProcessors" xsi:type="array">
-                <item name="if" xsi:type="object">Magento\Framework\Filter\DirectiveProcessor\IfDirective</item>
-                <item name="for" xsi:type="object">Magento\Framework\Filter\DirectiveProcessor\ForDirective</item>
+                <item name="if" xsi:type="object">Elgentos\VarnishExtended\Filter\IfDirective</item>
+                <item name="for" xsi:type="object">Elgentos\VarnishExtended\Filter\ForDirective</item>
                 <item name="var" xsi:type="object">Magento\Framework\Filter\DirectiveProcessor\VarDirective</item>
             </argument>
         </arguments>

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Elgentos\VarnishExtended\Model\Varnish;
 
+use Elgentos\VarnishExtended\Model\Config;
 use Elgentos\VarnishExtended\Model\TemplateFactory;
 use Magento\PageCache\Model\VclTemplateLocatorInterface;
 
@@ -17,7 +18,8 @@ class VCLGenerator extends \Magento\PageCache\Model\Varnish\VclGenerator
         private readonly array $accessList,
         private readonly string $gracePeriod,
         private readonly string $sslOffloadedHeader,
-        private readonly array $designExceptions = []
+        private readonly Config $varnishExtendedConfig,
+        private readonly array $designExceptions = [],
     ) {
         parent::__construct(
             $vclTemplateLocator,
@@ -44,6 +46,14 @@ class VCLGenerator extends \Magento\PageCache\Model\Varnish\VclGenerator
             'access_list' => $this->getTransformedAccessList(),
             'grace_period' => $this->gracePeriod,
             'ssl_offloaded_header' => $this->sslOffloadedHeader,
+            'tracking_parameters' => $this->varnishExtendedConfig->getTrackingParameters(),
+            'enable_bfcache' => (bool) $this->varnishExtendedConfig->getEnableBfcache(),
+            'disable_bfcache' => (bool) !$this->varnishExtendedConfig->getEnableBfcache(),
+            'enable_media_cache' => (bool) $this->varnishExtendedConfig->getEnableMediaCache(),
+            'enable_static_cache' => (bool) $this->varnishExtendedConfig->getEnableStaticCache(),
+            'use_xkey_vmod' => (int) $this->varnishExtendedConfig->getUseXkeyVmod(),
+            'use_soft_purging' => (int) $this->varnishExtendedConfig->getUseSoftPurging(),
+            'pass_on_cookie_presence' => $this->varnishExtendedConfig->getPassOnCookiePresence(),
             'design_exceptions_code' => $this->getRegexForDesignExceptions()
         ];
     }
@@ -88,6 +98,13 @@ class VCLGenerator extends \Magento\PageCache\Model\Varnish\VclGenerator
      */
     private function getTransformedAccessList(): array
     {
-        return array_map(fn ($x) => ['ip' => trim($x)], $this->accessList);
+        $result = [];
+        foreach ($this->accessList as $ip) {
+            $ip = trim($ip);
+            if (strlen($ip)) {
+                $result[] = ['ip' => $ip];
+            }
+        }
+        return $result;
     }
 }
