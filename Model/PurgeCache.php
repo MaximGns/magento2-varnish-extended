@@ -7,6 +7,7 @@ namespace Elgentos\VarnishExtended\Model;
 use Exception;
 use Generator;
 use Laminas\Http\Client\Adapter\Socket;
+use Laminas\Http\Response;
 use Laminas\Uri\Uri;
 use Magento\CacheInvalidate\Model\SocketFactory;
 use Magento\Framework\App\Config\ScopeConfigInterface;
@@ -18,6 +19,7 @@ class PurgeCache extends \Magento\CacheInvalidate\Model\PurgeCache
 {
     public const HEADER_X_MAGENTO_TAGS_PATTERN = 'X-Magento-Tags-Pattern';
     public const HEADER_X_MAGENTO_PURGE_SOFT = 'X-Magento-Purge-Soft';
+
 
     /**
      * @var Server
@@ -164,9 +166,9 @@ class PurgeCache extends \Magento\CacheInvalidate\Model\PurgeCache
                 $read = $socketAdapter->read();
 
                 $this->eventManager->dispatch('varnish_cache_purge_invalidate_result', [
-                    'tags' => $formattedTagsChunk,
-                    'result' => $read,
+                    'result' => Response::fromString($read),
                     'connected_to' => [$server->getHost(), $server->getPort()],
+                    'tags' => $formattedTagsChunk,
                 ]);
 
                 $socketAdapter->close();

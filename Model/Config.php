@@ -17,19 +17,9 @@ class Config extends PageCacheConfig
 
     private Json $serializer;
 
-    public const XML_PATH_VARNISH_ENABLE_BFCACHE = 'system/full_page_cache/varnish/enable_bfcache';
+    public const string XML_PATH_VARNISH_ENABLE_BFCACHE = 'system/full_page_cache/varnish/enable_bfcache';
 
-    public const XML_PATH_VARNISH_ENABLE_MEDIA_CACHE = 'system/full_page_cache/varnish/enable_media_cache';
-
-    public const XML_PATH_VARNISH_ENABLE_STATIC_CACHE = 'system/full_page_cache/varnish/enable_static_cache';
-
-    public const XML_PATH_VARNISH_TRACKING_PARAMETERS = 'system/full_page_cache/varnish/tracking_parameters';
-
-    public const XML_PATH_VARNISH_USE_XKEY_VMOD = 'system/full_page_cache/varnish/use_xkey_vmod';
-
-    public const XML_PATH_VARNISH_USE_SOFT_PURGING = 'system/full_page_cache/varnish/use_soft_purging';
-
-    public const XML_PATH_VARNISH_PASS_ON_COOKIE_PRESENCE = 'system/full_page_cache/varnish/pass_on_cookie_presence';
+    public const string XML_PATH_VARNISH_TRACKING_PARAMETERS = 'system/full_page_cache/varnish/tracking_parameters';
 
     public function __construct(
         \Magento\Framework\Filesystem\Directory\ReadFactory $readFactory,
@@ -53,31 +43,12 @@ class Config extends PageCacheConfig
 
     public function getTrackingParameters(): string
     {
-        $trackingParams = $this->scopeConfig->getValue(static::XML_PATH_VARNISH_TRACKING_PARAMETERS);
-
-        return implode('|', array_map(function ($param) {
-            return $param['param'];
-        }, is_array($trackingParams) ? $trackingParams : json_decode($trackingParams, true)));
+        return $this->scopeConfig->getValue(self::XML_PATH_VARNISH_TRACKING_PARAMETERS);
     }
 
-    public function getUseXkeyVmod(): bool
+    public function getEnableBfcache(): string
     {
-        return (bool) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_USE_XKEY_VMOD);
-    }
-
-    public function getUseSoftPurging(): bool
-    {
-        return (bool) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_USE_SOFT_PURGING);
-    }
-
-    public function getPassOnCookiePresence(): array
-    {
-        return $this->serializer->unserialize($this->scopeConfig->getValue(static::XML_PATH_VARNISH_PASS_ON_COOKIE_PRESENCE) ?? '{}');
-    }
-
-    public function getEnableBfcache(): bool
-    {
-        return (bool) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_BFCACHE);
+        return $this->scopeConfig->getValue(self::XML_PATH_VARNISH_ENABLE_BFCACHE);
     }
 
     public function getSslOffloadedHeader()
@@ -87,23 +58,23 @@ class Config extends PageCacheConfig
 
     public function getBackendHost()
     {
-        return $this->scopeConfig->getValue(static::XML_VARNISH_PAGECACHE_BACKEND_HOST);
+        return $this->scopeConfig->getValue(self::XML_VARNISH_PAGECACHE_BACKEND_HOST);
     }
 
     public function getBackendPort()
     {
-        return $this->scopeConfig->getValue(static::XML_VARNISH_PAGECACHE_BACKEND_PORT);
+        return $this->scopeConfig->getValue(self::XML_VARNISH_PAGECACHE_BACKEND_PORT);
     }
 
     public function getAccessList()
     {
-        $accessList = $this->_scopeConfig->getValue(static::XML_VARNISH_PAGECACHE_ACCESS_LIST);
+        $accessList = $this->_scopeConfig->getValue(self::XML_VARNISH_PAGECACHE_ACCESS_LIST);
         return array_map('trim', explode(',', $accessList));
     }
 
     public function getGracePeriod()
     {
-        return $this->scopeConfig->getValue(static::XML_VARNISH_PAGECACHE_GRACE_PERIOD);
+        return $this->scopeConfig->getValue(self::XML_VARNISH_PAGECACHE_GRACE_PERIOD);
     }
 
     public function getDesignExceptions()
@@ -114,21 +85,5 @@ class Config extends PageCacheConfig
         );
 
         return $expressions ? $this->serializer->unserialize($expressions) : [];
-    }
-
-    /**
-     * @return bool
-     */
-    public function getEnableMediaCache(): bool
-    {
-        return (bool) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_MEDIA_CACHE);
-    }
-
-    /**
-     * @return bool
-     */
-    public function getEnableStaticCache(): bool
-    {
-        return (bool) $this->scopeConfig->getValue(static::XML_PATH_VARNISH_ENABLE_STATIC_CACHE);
     }
 }
